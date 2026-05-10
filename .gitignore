@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+/frontend/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -10,10 +11,15 @@
 
 # frontend build artifacts
 /.next
+/frontend/.next
 /out
+/frontend/out
 /output
+/frontend/output
 /build
+/frontend/build
 /coverage
+/frontend/coverage
 *.tsbuildinfo
 
 # Python / FastAPI

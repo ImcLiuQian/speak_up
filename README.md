@@ -1,210 +1,110 @@
 # Speak Up
 
-Speak Up 是一个 AI 演讲训练原型，当前已经把三条实时链路接起来了：
+Speak Up 是一个演讲训练 Web 原型。当前代码是 Next.js 前端加 FastAPI 后端，支持自由演讲、文档演讲、实时 AI 教练、AI 追问、回放复盘和最终报告生成。
 
-- 实时 ASR
-- 实时 AI Live Coach
-- AI 问答训练
-- 训练报告
-- 回放复盘
+## 仓库结构
 
-历史演讲和场景切换入口已下线，当前默认进入通用表达训练。
+```text
+speak_up/
+├── frontend/                  # Next.js 前端项目根
+├── backend/                   # FastAPI 后端
+├── ai_coach/profiles.json     # 前后端共享的 AI 教练画像源
+├── backend/requirements.txt   # 后端 Python 依赖
+└── .env.example               # 运行环境变量模板
+```
 
-## 当前能力
+## 技术栈
 
-### 训练模式
+- 前端：Next.js 16.2.2、React 19、TypeScript、Tailwind CSS 4、Recharts、MediaPipe Tasks Vision。
+- 后端：FastAPI、Pydantic、httpx、websockets、pypdf。
+- 外部 AI：通过环境变量配置阿里云 DashScope realtime 和 OpenAI-compatible 接口。
+- 后端入口：`backend/app/main.py`。
+- 前端入口：`frontend/src/app/page.tsx`，直接渲染 `SessionWorkspace`。
 
-- `free_speech`
-- `document_speech`
-- 场景不再暴露给用户选择，默认使用 `general`
-- 语言入口不再暴露给用户，默认中文
+## 主流程
 
-### AI 教练
+1. 用户打开 `/` 或 `/session`，两者都会进入 `SessionWorkspace`。
+2. 前端从 `ai_coach/profiles.json` 读取教练画像，选择场景，再选择自由演讲或文档演讲模式。
+3. 文档演讲可以使用内置练习文本，也可以上传 PDF/Markdown，前端调用 `POST /api/document/extract` 抽取正文。
+4. 开始练习时，前端调用 `POST /api/session/start`，再连接 `/ws/session/{session_id}`。
+5. 浏览器采集麦克风 PCM 音频和摄像头画面，持续发给后端，并接收文字稿、Live Coach、问答和音频事件。
+6. 结束练习时，前端尽量上传回放媒体，调用 `POST /api/session/{session_id}/finish`，再跳转到 `/report`。
+7. 报告页在后端生成报告期间轮询 `GET /api/session/{session_id}/report`。
+8. 回放页调用 `GET /api/session/{session_id}/replay`，按时间轴同步展示文字稿和教练信号。
 
-- 进入训练前先选择 AI 教练
-- 主训练页右侧顶部展示当前教练
-- QA、报告和回放沿用同一位教练
-- QA 语音由教练 profile 驱动，前端不再提供 voice profile 选择器
+## 界面预览
 
-### 问答模式
+### 主训练页
 
-- QA 是独立开关，不是第三种训练模式
-- 可同时工作在自由演讲和文档演讲下
-- 每轮最多 `3` 个主题
-- 每个主题最多 `3` 次追问
+![Speak Up 主训练页](demo_image/main_page.png)
 
-### 文档输入
+### AI 问答
 
-- 支持上传 `pdf`
-- 支持上传 `md`
-- `ppt/pptx` 已下线
-- 文档文本会进入 QA 预热和提问上下文
-- PDF 和 Markdown 预览共用 `DocumentAssetPreview`，Markdown 在白色文档卡片内部滚动
-- 文档当前仍不参与 Live Coach 的实时打分
+![AI 问答模式](demo_image/interviewer.png)
 
-## 实时链路
+### 回放复盘
 
-### ASR
+![回放复盘页](demo_image/review.png)
 
-- 前端通过 `AudioWorklet` 采集麦克风，并请求浏览器启用回声消除、降噪、自动增益
-- 音频重采样到 `PCM 16k mono`
-- 送后端前会先经过主讲人过滤：先用能量门控跟踪当前最强近场人声，再用轻量声纹门控匹配本轮主讲人的频谱包络；不匹配的片段转成等长静音
-- 后端转发给阿里云 `qwen3-asr-flash-realtime`
-- 前端消费 `transcript_partial` / `transcript_final`
+### 训练建议
 
-### Live Coach
-
-- 视频帧约每秒 1 张
-- 后端维持两条 Omni lane：
-  - `voice_content`
-  - `body_visual`
-- Omni patch 和本地 transcript 规则统一汇总成 `coach_panel`
-
-### 报告与回放
-
-- 训练结束后生成真实 `sessionId` 报告
-- 报告生成期间，页面只保留必要等待提示，用户可从右上角先进入回放复盘
-- 回放复盘播放训练录制媒体，并把文字稿和 AI Live Coach 建议按时间线联动
-- 录制媒体包含用户摄像头画面、麦克风音轨，以及 QA 环节 AI 教练口播音频
-
-### QA
-
-- `qa_brain_service` 负责压缩上下文和预热 brief
-- `qwen3.5-omni-plus-realtime` 负责实时口播提问
-- 用户回答期间，ASR partial 会先进入临时答案
-- `speech_stopped` / final transcript 后，如果答案不是空、语气词或过短内容，`2s` 后自动进入下一轮
-- partial transcript 只走稳定窗口，默认连续稳定约 `4.5s` 才允许推进，避免用户还没说完就被打断
-- “我说完了 / 就这么多 / 以上”等结束口令会走快速提交路径，默认 `350ms` 后进入下一轮
-- 如果一直没有有效回答，`10s` 静默兜底决定追问、下一题或结束
-- 前端会回传 interviewer 音频播放开始/结束，避免服务端在音频还没播完时提前推进
-- 当前声纹门控是浏览器侧轻量频谱 profile，不是大模型说话人 embedding；多人同声时只能减少误触发，不能做干净的人声分离
-
-更细的时序和日志说明见 [docs/qa-mode-design.md](docs/qa-mode-design.md)。
+![训练建议展示](demo_image/suggestion.png)
 
 ## 本地运行
 
-### 环境要求
-
-- Node.js 20+
-- npm
-- Python 3.11+
-
-### 前端
+安装前端依赖：
 
 ```bash
+cd frontend
 npm install
-cp .env.example .env.local
+```
+
+启动前端：
+
+```bash
+cd frontend
 npm run dev
 ```
 
-默认地址：
-
-```text
-http://localhost:3000
-```
-
-### 后端
+安装后端依赖：
 
 ```bash
-python3 -m venv backend/.venv
-source backend/.venv/bin/activate
-pip install -r backend/requirements.txt
-backend/.venv/bin/uvicorn app.main:app --reload --app-dir backend --port 8000
+cd backend
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-健康检查：
+从 `backend/` 目录启动后端：
 
 ```bash
-curl http://127.0.0.1:8000/health
+uvicorn app.main:app --reload
 ```
+
+前端默认会尝试连接 `http://127.0.0.1:8000` 和 `http://localhost:8000`。如需改后端地址，设置 `NEXT_PUBLIC_API_BASE_URL`。
 
 ## 环境变量
 
-最少需要：
+真实 AI 链路运行前，按 `.env.example` 准备环境变量。后端通常从 shell 环境读取；如果需要让 Next.js 从文件读取前端变量，把 `NEXT_PUBLIC_*` 写到 `frontend/.env.local`。核心必填项是：
 
 ```bash
-DASHSCOPE_API_KEY=sk-xxx
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+DASHSCOPE_API_KEY=...
 ```
 
-完整示例见 [.env.example](.env.example)。
+主要配置组：
 
-## 关键接口
+- ASR：`ALIYUN_REALTIME_ASR_MODEL`、`ALIYUN_REALTIME_ASR_URL`、`ALIYUN_REALTIME_ASR_SILENCE_DURATION_MS`。
+- Live Coach：`ALIYUN_OMNI_COACH_MODEL`、`ALIYUN_OMNI_COACH_URL`、`ALIYUN_OMNI_COACH_SILENCE_DURATION_MS`。
+- 问答：`ALIYUN_QA_OMNI_MODEL`、`ALIYUN_QA_BRAIN_MODEL`、`QA_MAX_QUESTION_TOPICS`、`QA_MAX_FOLLOW_UPS_PER_QUESTION`。
+- 报告：`REPORT_WINDOW_BUILD_INTERVAL_SECONDS`、`ALIYUN_REPORT_WINDOW_MODEL`、`ALIYUN_REPORT_BRAIN_MODEL`。
 
-### HTTP
+## 质量检查
 
-- `GET /health`
-- `POST /api/session/start`
-- `GET /api/session/{session_id}`
-- `POST /api/session/{session_id}/finish`
-- `GET /api/session/{session_id}/report`
-- `POST /api/session/{session_id}/report/generate`
-- `GET /api/session/{session_id}/replay`
-- `POST /api/session/{session_id}/replay/media`
-- `GET /api/session/{session_id}/replay/media`
-- `POST /api/document/extract`
-- `GET /api/qa/voice-profiles`
-- `GET /api/session/{session_id}/qa/turns/{turn_id}/audio`
+仓库提供前端 lint 命令：
 
-### WebSocket
-
-- `WS /ws/session/{session_id}`
-
-前端会发送：
-
-- `start_stream`
-- `audio_chunk`
-- `video_frame`
-- `start_qa`
-- `stop_qa`
-- `qa_prewarm_context`
-- `qa_select_voice_profile`
-- `qa_audio_playback_started`
-- `qa_audio_playback_ended`
-
-后端会返回：
-
-- `session_status`
-- `transcript_partial`
-- `transcript_final`
-- `coach_panel`
-- `qa_state`
-- `qa_question`
-- `qa_audio_stream_start`
-- `qa_audio_stream_delta`
-- `qa_audio_stream_end`
-- `qa_feedback`
-- `qa_voice_profiles`
-- `pong`
-- `error`
-
-## 目录
-
-```text
-src/
-  components/session/
-  hooks/
-  lib/
-  types/
-
-backend/app/
-  main.py
-  schemas.py
-  services/
+```bash
+cd frontend
+npm run lint
 ```
 
-QA 相关核心文件：
-
-- `backend/app/services/session_manager.py`
-- `backend/app/services/qa_mode_orchestrator.py`
-- `backend/app/services/qa_brain_service.py`
-- `backend/app/services/qa_omni_realtime_service.py`
-- `src/components/session/session-workspace.tsx`
-- `src/components/session/session-stage.tsx`
-- `src/components/session/document-viewer.tsx`
-- `src/components/session/qa-avatar-panel.tsx`
-- `src/hooks/useMockSession.ts`
-
-## 当前限制
-
-- 文档当前只参与 QA，不参与 Live Coach 实时评分
+后端常规验证方式是启动 FastAPI 后检查 `/health`、`/api/session/start` 和 WebSocket 会话链路。

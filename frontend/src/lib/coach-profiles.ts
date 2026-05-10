@@ -1,4 +1,4 @@
-import rawProfiles from "../../ai_coach/profiles.json";
+import rawProfiles from "../../../ai_coach/profiles.json";
 
 export interface CoachVoiceProfile {
   tone: string;
