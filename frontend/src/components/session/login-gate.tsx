@@ -137,11 +137,11 @@ export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) 
           </div>
         </div>
 
-        <aside className="relative flex min-h-[calc(100dvh-2rem)] min-w-0 items-start justify-center overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,#fdfbff_0%,#fbf8ff_47%,#f1e6ff_100%)] px-5 py-8 md:min-h-[calc(100dvh-52px)] md:px-8 xl:px-7">
+        <aside className="relative flex min-h-[calc(100dvh-2rem)] min-w-0 items-center justify-center overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,#fdfbff_0%,#fbf8ff_47%,#f1e6ff_100%)] px-5 py-8 md:min-h-[calc(100dvh-52px)] md:px-8 xl:px-7">
           <div className="pointer-events-none absolute -right-40 -top-28 h-[560px] w-[560px] rounded-full border border-violet-100/50 bg-white/20" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-[radial-gradient(circle_at_50%_100%,rgba(139,92,246,0.20),transparent_68%)]" />
 
-          <section className="relative z-10 w-full min-w-0 max-w-full sm:max-w-[388px] xl:mt-[8px]">
+          <section className="relative z-10 w-full min-w-0 max-w-full sm:max-w-[388px]">
             <div className="mb-9 flex items-center gap-3 xl:hidden">
               <span className="relative flex h-12 w-12 overflow-hidden rounded-[14px] shadow-[0_10px_24px_rgba(126,50,255,0.22)]">
                 <Image
