@@ -29,10 +29,10 @@ class VoiceProfileService:
         profile_path = Path(__file__).resolve().parents[3] / "ai_coach" / "profiles.json"
         payload = json.loads(profile_path.read_text(encoding="utf-8"))
         gender_map = {
-            "duojiong_he": "male",
-            "youge_hu": "male",
-            "xiaoling_jia": "female",
-            "daxing_jin": "female",
+            "warm_voice_coach": "male",
+            "sharp_logic_coach": "male",
+            "bright_energy_coach": "female",
+            "high_standards_coach": "female",
         }
         style_map = {
             "温暖型": "gentle",

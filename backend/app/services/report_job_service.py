@@ -41,6 +41,7 @@ class ReportJobContext:
     scenario_id: ScenarioType
     language: LanguageOption
     coach_profile_id: str | None = None
+    user_email: str | None = None
     finished: bool = False
 
 
@@ -71,11 +72,13 @@ class ReportJobService:
         scenario_id: ScenarioType,
         language: LanguageOption,
         coach_profile_id: str | None = None,
+        user_email: str | None = None,
     ) -> None:
         self._contexts[session_id] = ReportJobContext(
             scenario_id=scenario_id,
             language=language,
             coach_profile_id=coach_profile_id,
+            user_email=user_email,
         )
         await self.artifact_service.init_session(
             session_id=session_id,
@@ -87,6 +90,7 @@ class ReportJobService:
             scenario_id=scenario_id,
             language=language,
             coach_profile_id=coach_profile_id,
+            user_email=user_email,
         )
 
     async def update_coach_profile(self, session_id: str, coach_profile_id: str | None) -> None:
@@ -471,6 +475,7 @@ class ReportJobService:
             scenario_id=current_state.scenarioId,
             language=current_state.language,
             coach_profile_id=current_state.coachProfileId,
+            user_email=current_state.userEmail,
         )
         self._contexts[session_id] = context
         return context

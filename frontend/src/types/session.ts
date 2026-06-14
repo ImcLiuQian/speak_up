@@ -2,6 +2,7 @@ export type ScenarioType = "general" | "host" | "guest-sharing" | "standup";
 export type LanguageOption = "zh" | "en";
 export type TrainingMode = "free_speech" | "document_speech";
 export type TrainingDocumentKind = "pdf" | "md";
+export type CameraPermissionState = "idle" | "granted" | "denied" | "insecure" | "unavailable";
 export type CoachProfileId = string;
 export type VoiceGender = "male" | "female";
 export type VoiceStyle = "professional" | "gentle" | "firm" | "encouraging";
@@ -66,6 +67,7 @@ export interface SessionSetup {
   scenarioId: ScenarioType;
   language: LanguageOption;
   coachProfileId: CoachProfileId;
+  authToken?: string | null;
   trainingMode?: TrainingMode;
   documentName?: string | null;
   documentText?: string | null;

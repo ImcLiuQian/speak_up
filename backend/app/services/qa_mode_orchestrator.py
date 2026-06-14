@@ -61,7 +61,7 @@ class QASessionState:
     language: LanguageOption
     enabled: bool = False
     training_mode: TrainingMode = "free_speech"
-    voice_profile_id: str = "duojiong_he"
+    voice_profile_id: str = "warm_voice_coach"
     document_name: str | None = None
     document_text: str | None = None
     manual_text: str | None = None

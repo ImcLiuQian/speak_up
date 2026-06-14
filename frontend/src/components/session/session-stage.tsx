@@ -5,6 +5,7 @@ import { DocumentPreviewPanel } from "@/components/session/document-preview-pane
 import { DocumentStage } from "@/components/session/document-stage";
 import { QAAvatarPanel } from "@/components/session/qa-avatar-panel";
 import type {
+  CameraPermissionState,
   CapturedVideoFrame,
   QAQuestion,
   QAPhase,
@@ -14,7 +15,7 @@ import type {
 
 interface SessionStageProps {
   avatarSrc: string;
-  cameraPermissionState: "idle" | "granted" | "denied";
+  cameraPermissionState: CameraPermissionState;
   cameraStream: MediaStream | null;
   controls: React.ReactNode;
   documentAsset: TrainingDocumentAsset | null;

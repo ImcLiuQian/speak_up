@@ -28,7 +28,6 @@ export interface CoachProfile {
   id: string;
   name: string;
   personaType: string;
-  originName: string;
   avatarFile: string;
   avatarSrc: string;
   slogan: string;
@@ -43,7 +42,6 @@ type RawCoachProfile = {
   id: string;
   name: string;
   persona_type: string;
-  origin_name: string;
   avatar_file: string;
   slogan: string;
   bio: string;
@@ -75,7 +73,6 @@ const coachProfiles = (rawProfiles as RawCoachProfile[]).map<CoachProfile>((prof
   id: profile.id,
   name: profile.name,
   personaType: profile.persona_type,
-  originName: profile.origin_name,
   avatarFile: profile.avatar_file,
   avatarSrc: `/ai-coach/${profile.avatar_file}`,
   slogan: profile.slogan,

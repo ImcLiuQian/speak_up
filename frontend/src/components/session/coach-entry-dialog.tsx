@@ -65,10 +65,10 @@ export function CoachEntryDialog({
           <div className="bg-[radial-gradient(circle_at_top,rgba(139,92,246,0.18),transparent_48%),linear-gradient(180deg,#faf5ff_0%,#ffffff_100%)] p-8">
             <h2 className="max-w-[360px] text-[2rem] font-semibold leading-tight tracking-tight text-slate-950">
               阁下谈吐非凡，准备选
-              <span className="block">哪位“嘴替”陪你练练？</span>
+              <span className="block">哪位教练陪你练练？</span>
             </h2>
             <p className="mt-4 max-w-[360px] text-sm leading-7 text-slate-500">
-              是想在炅炅的酒窝里溺水，还是在星姐的毒舌下求生？请开始你的翻牌表演！
+              想先被温柔接住，还是让高标准教练帮你打磨？选一位适合当下目标的教练，开始这次训练。
             </p>
 
             {activeCoach ? (

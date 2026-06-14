@@ -31,6 +31,7 @@ from app.schemas import (
     TranscriptPartialEvent,
     QAStateEvent,
 )
+from app.services.auth_service import auth_service
 from app.services.coach_panel_service import CoachPanelService
 from app.services.omni_service import (
     AliyunOmniCoachService,
@@ -56,10 +57,13 @@ class SessionRecord:
     scenario_id: ScenarioType
     language: LanguageOption
     coach_profile_id: str | None = None
+    user_email: str | None = None
+    quota_limit_ms: int = 0
     status: SessionStatus = "created"
     transcript_count: int = 0
     audio_chunk_count: int = 0
     video_frame_count: int = 0
+    finished_duration_ms: int = 0
     started_at_monotonic: float | None = None
     omni_coach_disabled_reason: str | None = None
     omni_body_disabled_reason: str | None = None
@@ -174,6 +178,7 @@ class SessionManager:
         self.qa_active_audio_turns: dict[str, str] = {}
         self.qa_pending_response_done: dict[str, tuple[str, str]] = {}
         self.qa_response_done_grace_tasks: dict[str, asyncio.Task[None]] = {}
+        self.quota_limit_tasks: dict[str, asyncio.Task[None]] = {}
         self.qa_answer_audio_started_at_ms: dict[str, int] = {}
         self.qa_answer_window_opened_at_ms: dict[str, int] = {}
         self.qa_answer_activity_sequences: dict[str, int] = {}
@@ -242,23 +247,29 @@ class SessionManager:
         scenario_id: ScenarioType,
         language: LanguageOption,
         coach_profile_id: str | None,
+        *,
+        user_email: str | None = None,
+        session_id: str | None = None,
+        quota_limit_ms: int = 0,
     ) -> SessionRecord:
-        session_id = uuid4().hex
+        resolved_session_id = session_id or uuid4().hex
         resolved_coach_profile_id = self.qa_mode_orchestrator.voice_profile_service.get(coach_profile_id).profile.id
         session = SessionRecord(
-            session_id=session_id,
+            session_id=resolved_session_id,
             scenario_id=scenario_id,
             language=language,
             coach_profile_id=resolved_coach_profile_id,
+            user_email=user_email,
+            quota_limit_ms=max(0, int(quota_limit_ms)),
         )
-        self.coach_panel_service.get_or_create_panel(session_id, language)
+        self.coach_panel_service.get_or_create_panel(resolved_session_id, language)
         self.qa_mode_orchestrator.register_session(
-            session_id,
+            resolved_session_id,
             scenario_id,
             language,
             resolved_coach_profile_id,
         )
-        self.sessions[session_id] = session
+        self.sessions[resolved_session_id] = session
         return session
 
     def get_session(self, session_id: str) -> SessionRecord | None:
@@ -269,8 +280,11 @@ class SessionManager:
         if session is None:
             return None
 
+        self._cancel_quota_limit_task(session_id)
+        duration_ms = self._build_elapsed_ms(session)
+        session.finished_duration_ms = duration_ms
         session.status = "finished"
-        await self._mark_report_session_finished(session, self._build_elapsed_ms(session))
+        await self._mark_report_session_finished(session, duration_ms)
 
         try:
             await self.stt_service.finish_session(session_id)
@@ -315,6 +329,7 @@ class SessionManager:
         if websocket in session.sockets:
             session.sockets.remove(websocket)
         if not session.sockets:
+            self._cancel_quota_limit_task(session.session_id)
             self._cancel_qa_prewarm_task(session.session_id)
             self._cancel_qa_prewarm_refresh_task(session.session_id)
             self._clear_qa_runtime_state(session.session_id)
@@ -322,6 +337,13 @@ class SessionManager:
             self.coach_panel_service.close_session(session.session_id)
             self.qa_mode_orchestrator.close_session(session.session_id)
             if session.status != "finished":
+                asyncio.create_task(
+                    auth_service.complete_session(
+                        email=session.user_email,
+                        session_id=session.session_id,
+                        duration_ms=self._build_elapsed_ms(session),
+                    )
+                )
                 self.report_job_service.cancel_session(session.session_id)
             asyncio.create_task(self.stt_service.close_session(session.session_id))
             asyncio.create_task(self.omni_coach_service.close_session(session.session_id))
@@ -331,6 +353,10 @@ class SessionManager:
     async def handle_client_message(self, session: SessionRecord, message: ClientMessage, websocket: WebSocket) -> None:
         if message.type == "ping":
             await websocket.send_json(PongEvent().model_dump())
+            return
+
+        if session.status == "finished":
+            await websocket.send_json(ErrorEvent(message="训练会话已结束。").model_dump())
             return
 
         if message.type == "start_stream":
@@ -367,6 +393,7 @@ class SessionManager:
             session.status = "streaming"
             session.started_at_monotonic = monotonic()
             session.body_lane_retry_after_monotonic = 0.0
+            self._launch_quota_limit_task(session)
             self.report_job_service.start_periodic_build(session.session_id)
             self._launch_qa_prewarm_task(session)
             self._schedule_qa_prewarm_refresh(session.session_id, reason="stream_started", delay_seconds=0.0)
@@ -1365,6 +1392,25 @@ class SessionManager:
             logger.info("qa.response_done_grace.cancel session=%s", session_id)
             task.cancel()
 
+    def _launch_quota_limit_task(self, session: SessionRecord) -> None:
+        if session.quota_limit_ms <= 0 or session.session_id in self.quota_limit_tasks:
+            return
+        logger.info("quota.limit_task.launch session=%s limit_ms=%s", session.session_id, session.quota_limit_ms)
+        task = asyncio.create_task(self._run_quota_limit(session.session_id, session.quota_limit_ms))
+        self.quota_limit_tasks[session.session_id] = task
+        task.add_done_callback(
+            lambda finished_task, session_id=session.session_id: self._on_quota_limit_task_done(
+                session_id,
+                finished_task,
+            )
+        )
+
+    def _cancel_quota_limit_task(self, session_id: str) -> None:
+        task = self.quota_limit_tasks.pop(session_id, None)
+        if task is not None and task is not asyncio.current_task():
+            logger.info("quota.limit_task.cancel session=%s", session_id)
+            task.cancel()
+
     def _bump_qa_answer_activity_sequence(self, session_id: str) -> int:
         next_sequence = self.qa_answer_activity_sequences.get(session_id, 0) + 1
         self.qa_answer_activity_sequences[session_id] = next_sequence
@@ -1408,6 +1454,10 @@ class SessionManager:
     def _on_qa_response_done_grace_task_done(self, session_id: str, task: asyncio.Task[None]) -> None:
         if self.qa_response_done_grace_tasks.get(session_id) is task:
             self.qa_response_done_grace_tasks.pop(session_id, None)
+
+    def _on_quota_limit_task_done(self, session_id: str, task: asyncio.Task[None]) -> None:
+        if self.quota_limit_tasks.get(session_id) is task:
+            self.quota_limit_tasks.pop(session_id, None)
 
     def _schedule_qa_prewarm_refresh(
         self,
@@ -1478,6 +1528,29 @@ class SessionManager:
             return
         except Exception as error:
             logger.exception("qa.prewarm_task.failed session=%s error=%s", session_id, error)
+
+    async def _run_quota_limit(self, session_id: str, limit_ms: int) -> None:
+        try:
+            await asyncio.sleep(max(0.1, limit_ms / 1000))
+            session = self.sessions.get(session_id)
+            if session is None or session.status != "streaming":
+                return
+            await self._broadcast(
+                session,
+                ErrorEvent(message="已达到今日训练额度，本次训练已由服务端自动结束。").model_dump(),
+            )
+            finished_session = await self.finish_session(session_id)
+            if finished_session is not None:
+                await auth_service.complete_session(
+                    email=finished_session.user_email,
+                    session_id=finished_session.session_id,
+                    duration_ms=finished_session.finished_duration_ms,
+                )
+        except asyncio.CancelledError:
+            logger.info("quota.limit_task.cancelled session=%s", session_id)
+            return
+        except Exception as error:
+            logger.exception("quota.limit_task.failed session=%s error=%s", session_id, error)
 
     async def _run_qa_prewarm_refresh(self, session_id: str, delay_seconds: float, reason: str) -> None:
         try:
