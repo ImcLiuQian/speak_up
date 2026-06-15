@@ -16,24 +16,24 @@ const coachCards = [
     name: "暖声教练",
     line: "先稳住表达，再打磨细节。",
     image: "/ai-coach/warm-voice-coach.jpg",
-    className: "right-[150px] top-[58px] z-40 h-[300px] w-[252px] rotate-[7deg]",
-    imageClassName: "h-[212px]",
-    imageObjectClassName: "object-[50%_40%]",
+    className: "right-[142px] top-[78px] z-40 h-[276px] w-[226px] rotate-[7deg]",
+    imageClassName: "h-[192px]",
+    imageObjectClassName: "object-[50%_50%]",
   },
   {
-    name: "锋芒教练",
+    name: "逻辑教练",
     line: "逻辑清晰，观点有力。",
-    image: "/ai-coach/sharp-logic-coach.jpg",
-    className: "right-[348px] top-[278px] z-30 h-[296px] w-[248px] rotate-[-10deg]",
-    imageClassName: "h-[204px]",
-    imageObjectClassName: "object-[50%_43%]",
+    image: "/ai-coach/sharp-logic-coach-suit.png",
+    className: "right-[338px] top-[300px] z-30 h-[302px] w-[252px] rotate-[-10deg]",
+    imageClassName: "h-[214px]",
+    imageObjectClassName: "object-[50%_48%]",
   },
   {
     name: "元气教练",
     line: "能量在线，感染全场。",
     image: "/ai-coach/bright-energy-coach.jpg",
-    className: "right-[88px] top-[340px] z-[35] h-[272px] w-[228px] rotate-[8deg]",
-    imageClassName: "h-[188px]",
+    className: "right-[152px] top-[382px] z-[35] h-[276px] w-[230px] rotate-[8deg]",
+    imageClassName: "h-[192px]",
     imageObjectClassName: "object-[50%_45%]",
   },
 ] as const;
@@ -41,7 +41,7 @@ const coachCards = [
 const showcaseFeatures = [
   {
     title: "开口练习",
-    subtitle: ["多场景模拟练习 大胆", "开口表达"],
+    subtitle: ["多场景模拟练习", "大胆开口表达"],
     icon: <MicIcon />,
   },
   {
@@ -51,25 +51,37 @@ const showcaseFeatures = [
   },
   {
     title: "复盘报告",
-    subtitle: ["结构化复盘总结 记录", "每次进步"],
+    subtitle: ["结构化复盘总结", "记录每次进步"],
     icon: <ReportIcon />,
   },
 ] as const;
 
-const starPoints = Array.from({ length: 72 }, (_, index) => {
+const starPoints = Array.from({ length: 124 }, (_, index) => {
   const left = 3 + ((index * 37 + (index % 7) * 11) % 94);
   const top = 4 + ((index * 53 + (index % 5) * 13) % 90);
-  const opacity = 0.1 + ((index * 17) % 16) / 100;
-  const size = index % 13 === 0 ? 2 : 1;
+  const opacity = 0.08 + ((index * 17) % 18) / 100;
+  const size = index % 17 === 0 ? 2 : 1;
   return [left, top, opacity, size] as const;
 });
 
-const soundBars = [5, 12, 20, 27, 35, 23, 58, 36, 22, 46, 70, 43, 28, 52, 31, 24, 39, 20, 32, 18, 26, 34, 16, 28, 42, 21, 14, 31, 19, 25];
+const particlePoints = Array.from({ length: 22 }, (_, index) => {
+  const left = 8 + ((index * 47 + 13) % 84);
+  const top = 8 + ((index * 31 + 19) % 76);
+  const size = index % 7 === 0 ? 5 : index % 4 === 0 ? 3 : 2;
+  return [left, top, size] as const;
+});
+
+const soundBars = Array.from({ length: 78 }, (_, index) => {
+  const wave = Math.abs(Math.sin(index * 0.58) + Math.sin(index * 1.21) * 0.45) * 24;
+  const pulse = index % 17 === 0 ? 42 : index % 11 === 0 ? 28 : index % 6 === 0 ? 16 : 0;
+  return Math.round(4 + wave + pulse + ((index * 19) % 9));
+});
+const distantBars = Array.from({ length: 36 }, (_, index) => Math.round(4 + Math.abs(Math.sin(index * 0.77) + Math.cos(index * 0.31) * 0.4) * 22 + (index % 10 === 0 ? 20 : 0)));
 
 export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) {
   return (
-    <main className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#e9edf4] px-4 py-5 text-slate-950 sm:px-7 lg:px-10">
-      <section className="mx-auto grid h-auto min-h-[690px] w-full max-w-[1510px] overflow-hidden rounded-[30px] bg-white shadow-[0_30px_96px_rgba(38,48,73,0.18)] xl:h-[min(842px,calc(100dvh-76px))] xl:grid-cols-[minmax(420px,0.405fr)_minmax(0,0.595fr)]">
+    <main className="relative flex min-h-[100dvh] items-start justify-center overflow-hidden bg-[#e9edf4] px-3 pb-20 pt-8 text-slate-950 sm:px-5 lg:px-6 min-[1500px]:pt-[54px]">
+      <section className="mx-auto grid h-auto min-h-[690px] w-full max-w-[1560px] overflow-hidden rounded-[30px] bg-white shadow-[0_30px_96px_rgba(38,48,73,0.18)] xl:h-[min(842px,calc(100dvh-76px))] xl:grid-cols-[minmax(420px,0.405fr)_minmax(0,0.595fr)]">
         <aside className="flex min-h-[690px] items-center justify-center px-8 py-12 sm:px-12 lg:px-16 xl:min-h-0 xl:px-[88px]">
           <section className="w-full max-w-[420px]">
             <div className="flex items-center gap-5">
@@ -97,20 +109,22 @@ export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) 
         </aside>
 
         <section className="relative hidden min-h-0 overflow-hidden rounded-r-[30px] bg-[#020918] text-white xl:block">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_22%,rgba(128,91,255,0.30)_0%,transparent_32%),radial-gradient(circle_at_72%_28%,rgba(37,91,150,0.22)_0%,transparent_34%),radial-gradient(circle_at_50%_74%,rgba(99,62,219,0.18)_0%,transparent_42%),linear-gradient(135deg,#17162f_0%,#071326_43%,#020916_100%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.05)_0%,transparent_28%,rgba(151,104,255,0.05)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_13%_14%,rgba(115,79,226,0.45)_0%,transparent_28%),radial-gradient(circle_at_46%_44%,rgba(91,45,201,0.42)_0%,transparent_30%),radial-gradient(circle_at_80%_20%,rgba(5,40,83,0.55)_0%,transparent_36%),linear-gradient(135deg,#191735_0%,#071226_47%,#020814_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.055)_0%,rgba(255,255,255,0.01)_25%,rgba(146,92,255,0.055)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_52%,transparent_0%,rgba(7,10,30,0.20)_46%,rgba(1,6,17,0.58)_100%)]" />
+          <StarTexture />
           <StarField />
 
-          <div className="absolute left-0 top-0 h-[842px] w-[900px] origin-top-left scale-[0.74] min-[1360px]:scale-[0.82] min-[1440px]:scale-[0.9] 2xl:scale-[0.96] min-[1680px]:scale-100">
-            <DecorativeWaves className="absolute bottom-[182px] right-[-116px] h-[220px] w-[820px] text-violet-500/25" />
+          <div className="absolute left-0 top-0 h-[842px] w-[900px] origin-top-left scale-[0.92] min-[1500px]:scale-[0.98] min-[1600px]:scale-100">
+            <DecorativeWaves className="absolute bottom-[154px] right-[-110px] h-[230px] w-[770px] text-violet-500/24" />
             <SoundLine />
 
-            <section className="absolute left-[74px] top-[92px] w-[490px]">
+            <section className="absolute left-[64px] top-[86px] w-[490px]">
               <h2 className="text-[54px] font-semibold leading-[1.08] tracking-[0] text-white">
                 把演讲练到
                 <span className="block text-[#d8c9ff]">上台前就有底气。</span>
               </h2>
-              <p className="mt-8 max-w-[382px] text-[20px] font-medium leading-[1.75] text-slate-300">
+              <p className="mt-5 max-w-[360px] text-[20px] font-medium leading-[1.75] text-slate-300">
                 AI 教练陪你开口练习，实时反馈表达，复盘每一次进步。
               </p>
             </section>
@@ -119,12 +133,12 @@ export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) 
               {coachCards.map((coach) => (
                 <CoachCard key={coach.name} coach={coach} />
               ))}
-              <SpeechBubble className="right-[22px] top-[144px]" icon={<SmallBarsIcon />} text={["语速更稳了", "表达更清晰!"]} />
-              <SpeechBubble className="right-[22px] top-[264px]" icon={<HeartIcon />} text={["情绪饱满", "打动人心!"]} />
-              <SpeechBubble className="left-[128px] top-[500px]" icon={<ReportIcon />} text={["结构清晰", "逻辑升级!"]} />
+              <SpeechBubble className="right-[2px] top-[128px]" tailClassName="-left-[9px] bottom-[18px] rotate-45" icon={<SmallBarsIcon />} text={["语速更稳了", "表达更清晰!"]} />
+              <SpeechBubble className="right-[8px] top-[328px]" tailClassName="-left-[9px] top-[18px] rotate-45" icon={<HeartIcon />} text={["情绪饱满", "打动人心!"]} />
+              <SpeechBubble className="left-[126px] top-[498px]" tailClassName="right-[-9px] top-[28px] rotate-45" icon={<ReportIcon />} text={["结构清晰", "逻辑升级!"]} />
             </div>
 
-            <div className="absolute inset-x-[74px] bottom-[58px] grid grid-cols-3 divide-x divide-white/14">
+            <div className="absolute inset-x-[54px] bottom-[82px] grid grid-cols-3 divide-x divide-white/14">
               {showcaseFeatures.map((feature) => (
                 <ShowcaseFeature key={feature.title} feature={feature} />
               ))}
@@ -139,13 +153,13 @@ export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) 
 
 function ShowcaseFeature({ feature }: { feature: (typeof showcaseFeatures)[number] }) {
   return (
-    <div className="grid min-w-0 grid-cols-[82px_minmax(0,1fr)] items-center gap-5 px-10 first:pl-0 last:pr-0">
-      <span className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full border border-violet-300/24 bg-violet-400/13 text-violet-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.11),0_16px_34px_rgba(18,11,55,0.24)]">
+    <div className="grid min-w-0 grid-cols-[68px_minmax(0,1fr)] items-center gap-[18px] px-5 first:pl-0 last:pr-0">
+      <span className="flex h-[66px] w-[66px] shrink-0 items-center justify-center rounded-full border border-violet-300/24 bg-violet-400/13 text-violet-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.11),0_16px_34px_rgba(18,11,55,0.24),0_0_36px_rgba(139,92,246,0.12)]">
         {feature.icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-[25px] font-semibold leading-8 tracking-[0] text-white">{feature.title}</span>
-        <span className="mt-2 block text-[16px] font-medium leading-7 text-slate-400">
+        <span className="block whitespace-nowrap text-[23px] font-semibold leading-8 tracking-[0] text-white">{feature.title}</span>
+        <span className="mt-2 block text-[15px] font-medium leading-7 text-slate-400">
           {feature.subtitle.map((line) => (
             <span key={line} className="block">{line}</span>
           ))}
@@ -155,11 +169,12 @@ function ShowcaseFeature({ feature }: { feature: (typeof showcaseFeatures)[numbe
   );
 }
 
-function SpeechBubble({ className, icon, text }: { className: string; icon: React.ReactNode; text: readonly string[] }) {
+function SpeechBubble({ className, tailClassName, icon, text }: { className: string; tailClassName: string; icon: React.ReactNode; text: readonly string[] }) {
   return (
-    <div className={`absolute z-20 flex w-[188px] items-center gap-4 rounded-[19px] border border-white/14 bg-[#1d2942]/90 px-5 py-4 shadow-[0_18px_42px_rgba(0,0,0,0.22)] backdrop-blur-md ${className}`}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center text-violet-300">{icon}</span>
-      <span className="text-[16px] font-semibold leading-[1.35] text-slate-200">
+    <div className={`absolute z-50 flex w-[166px] items-center gap-3 rounded-[18px] border border-white/15 bg-[#1c2942]/88 px-4 py-4 shadow-[0_18px_42px_rgba(0,0,0,0.24)] backdrop-blur-md ${className}`}>
+      <span className={`absolute h-4 w-4 border-b border-r border-white/15 bg-[#1c2942]/88 ${tailClassName}`} />
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center text-violet-300">{icon}</span>
+      <span className="relative text-[15px] font-semibold leading-[1.35] text-slate-200">
         {text.map((line) => (
           <span key={line} className="block">{line}</span>
         ))}
@@ -170,7 +185,7 @@ function SpeechBubble({ className, icon, text }: { className: string; icon: Reac
 
 function CoachCard({ coach }: { coach: (typeof coachCards)[number] }) {
   return (
-    <article className={`absolute overflow-hidden rounded-[20px] border-[3px] border-white/78 bg-[#0d1729] shadow-[0_28px_58px_rgba(0,0,0,0.30)] ${coach.className}`}>
+    <article className={`absolute overflow-hidden rounded-[18px] border-[3px] border-white/78 bg-[#0d1729] shadow-[0_28px_58px_rgba(0,0,0,0.32)] ${coach.className}`}>
       <div className={`relative overflow-hidden ${coach.imageClassName}`}>
         <Image
           src={coach.image}
@@ -180,9 +195,9 @@ function CoachCard({ coach }: { coach: (typeof coachCards)[number] }) {
           className={`object-cover ${coach.imageObjectClassName}`}
         />
       </div>
-      <div className="px-5 py-4">
-        <p className="text-[20px] font-semibold leading-7 text-white">{coach.name}</p>
-        <p className="mt-1 text-[15px] font-medium leading-6 text-slate-400">{coach.line}</p>
+      <div className="px-5 py-[13px]">
+        <p className="text-[19px] font-semibold leading-7 text-white">{coach.name}</p>
+        <p className="mt-1 text-[14px] font-medium leading-6 text-slate-400">{coach.line}</p>
       </div>
     </article>
   );
@@ -198,33 +213,86 @@ function StarField() {
           style={{ left: `${left}%`, top: `${top}%`, opacity, height: size, width: size }}
         />
       ))}
+      {particlePoints.map(([left, top, size], index) => (
+        <span
+          key={`particle-${left}-${top}-${index}`}
+          className="absolute rounded-full bg-violet-400 shadow-[0_0_18px_rgba(139,92,246,0.85)]"
+          style={{ left: `${left}%`, top: `${top}%`, height: size, width: size, opacity: index % 3 === 0 ? 0.9 : 0.55 }}
+        />
+      ))}
     </div>
+  );
+}
+
+function StarTexture() {
+  return (
+    <div
+      className="absolute inset-0 opacity-35"
+      style={{
+        backgroundImage: [
+          "radial-gradient(circle at 18% 24%, rgba(167,139,250,0.9) 0 1px, transparent 1.5px)",
+          "radial-gradient(circle at 70% 18%, rgba(255,255,255,0.42) 0 1px, transparent 1.5px)",
+          "radial-gradient(circle at 42% 66%, rgba(99,102,241,0.55) 0 1px, transparent 1.6px)",
+          "radial-gradient(circle at 86% 70%, rgba(139,92,246,0.55) 0 1px, transparent 1.6px)",
+        ].join(","),
+        backgroundPosition: "0 0, 38px 42px, 90px 18px, 126px 90px",
+        backgroundSize: "170px 170px, 220px 220px, 260px 260px, 310px 310px",
+      }}
+      aria-hidden="true"
+    />
   );
 }
 
 function SoundLine() {
   return (
-    <div className="absolute left-0 right-0 top-[346px] h-[128px]" aria-hidden="true">
-      <svg viewBox="0 0 900 128" className="h-full w-full overflow-visible" fill="none">
-        <path d="M0 64H900" stroke="url(#sound-line-gradient)" strokeWidth="1.4" opacity="0.5" />
+    <div className="absolute left-0 right-0 top-[306px] h-[160px]" aria-hidden="true">
+      <svg viewBox="0 0 900 160" className="h-full w-full overflow-visible" fill="none">
+        <path d="M0 82H900" stroke="url(#sound-line-gradient)" strokeWidth="1.2" opacity="0.42" />
+        <path
+          d="M0 82 C52 82 55 80 86 82 S149 84 181 82 S242 79 282 82 S354 87 400 82 S482 77 535 82 S630 89 690 82 S812 78 900 82"
+          stroke="url(#sound-line-gradient)"
+          strokeWidth="2"
+          opacity="0.5"
+        />
+        <path
+          d="M78 82 C128 82 148 81 180 82 C220 84 235 74 268 82 C306 91 332 74 356 82 C394 94 420 66 444 82 C480 101 512 72 548 82 C602 95 646 73 700 82 C758 90 812 78 900 82"
+          stroke="url(#sound-line-strong)"
+          strokeWidth="1.8"
+          opacity="0.72"
+        />
         <defs>
           <linearGradient id="sound-line-gradient" x1="0" y1="0" x2="900" y2="0" gradientUnits="userSpaceOnUse">
             <stop stopColor="#A78BFA" stopOpacity="0" />
             <stop offset="0.23" stopColor="#A78BFA" stopOpacity="0.75" />
-            <stop offset="0.76" stopColor="#A78BFA" stopOpacity="0.34" />
+            <stop offset="0.72" stopColor="#8B5CF6" stopOpacity="0.5" />
             <stop offset="1" stopColor="#A78BFA" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="sound-line-strong" x1="78" y1="0" x2="900" y2="0" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#A78BFA" stopOpacity="0" />
+            <stop offset="0.24" stopColor="#8B5CF6" stopOpacity="0.9" />
+            <stop offset="0.54" stopColor="#A78BFA" stopOpacity="0.68" />
+            <stop offset="1" stopColor="#8B5CF6" stopOpacity="0.06" />
           </linearGradient>
         </defs>
       </svg>
-      <span className="absolute left-[78px] top-1/2 flex h-[82px] w-[82px] -translate-y-1/2 items-center justify-center rounded-full border border-violet-300/20 bg-violet-400/13 text-violet-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_48px_rgba(139,92,246,0.10)]">
+      <span className="absolute left-[74px] top-1/2 flex h-[84px] w-[84px] -translate-y-1/2 items-center justify-center rounded-full border border-violet-300/22 bg-violet-400/13 text-violet-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_48px_rgba(139,92,246,0.16)]">
         <MicIcon />
       </span>
-      <span className="absolute left-[178px] top-1/2 h-[16px] w-[16px] -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_20px_rgba(167,139,250,0.72)]" />
-      <span className="absolute left-[212px] top-1/2 flex h-[92px] -translate-y-1/2 items-center gap-[9px]">
+      <span className="absolute left-[174px] top-1/2 h-[16px] w-[16px] -translate-y-1/2 rounded-full bg-violet-400 shadow-[0_0_20px_rgba(167,139,250,0.72)]" />
+      <span className="absolute left-[210px] top-1/2 flex h-[110px] -translate-y-1/2 items-center gap-[4px]">
         {soundBars.map((height, index) => (
           <span
             key={`${height}-${index}`}
-            className="w-[3px] rounded-full bg-violet-400/80"
+            className="w-[2px] rounded-full bg-violet-400/80"
+            style={{ height }}
+          />
+        ))}
+      </span>
+      <span className="absolute left-[606px] top-1/2 flex h-[72px] -translate-y-1/2 items-center gap-[5px]">
+        {distantBars.map((height, index) => (
+          <span
+            key={`distant-${height}-${index}`}
+            className="w-[2px] rounded-full bg-violet-400/38"
             style={{ height }}
           />
         ))}
@@ -253,7 +321,7 @@ function SmallBarsIcon() {
   return (
     <svg viewBox="0 0 32 32" className="h-8 w-8" fill="none" aria-hidden="true">
       {[6, 11, 16, 21, 26].map((x, index) => (
-        <rect key={x} x={x - 1.5} y={8 + (index % 2) * 4} width="3" height={16 - (index % 2) * 7} rx="1.5" fill="currentColor" />
+        <rect key={x} x={x - 1.5} y={7 + (index % 2) * 5} width="3" height={18 - (index % 2) * 8} rx="1.5" fill="currentColor" />
       ))}
     </svg>
   );
@@ -270,7 +338,7 @@ function RhythmIcon() {
 
 function MicIcon() {
   return (
-    <svg viewBox="0 0 32 32" className="h-8 w-8" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 32 32" className="h-9 w-9" fill="none" aria-hidden="true">
       <rect x="10.5" y="5" width="11" height="16" rx="5.5" stroke="currentColor" strokeWidth="2.5" />
       <path d="M6.8 15.5c0 5.1 3.7 8.7 9.2 8.7s9.2-3.6 9.2-8.7M16 24.2V28M11.8 28h8.4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
