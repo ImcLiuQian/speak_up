@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 
 import { clearStoredAuthToken, type AuthSession } from "@/lib/api";
@@ -40,12 +41,14 @@ export function AccountSettingsButton({
   onOpenChange,
   onSessionChange,
 }: AccountSettingsButtonProps) {
+  const router = useRouter();
   const accountName = authSession?.user.displayName ?? "";
   const initials = useMemo(() => buildInitials(accountName), [accountName]);
 
   const handleLogout = () => {
     clearStoredAuthToken();
     onSessionChange(null);
+    router.replace("/login");
   };
 
   return (

@@ -1,5 +1,5 @@
-import { SessionWorkspace } from "@/components/session/session-workspace";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <SessionWorkspace />;
+  redirect("/login");
 }
