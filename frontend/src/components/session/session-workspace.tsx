@@ -191,7 +191,6 @@ export function SessionWorkspace({
   const replaySessionIdRef = useRef<string | null>(null);
   const replayStartAtMsRef = useRef(0);
   const replayMimeTypeRef = useRef("");
-  const quotaAutoFinishRef = useRef(false);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
@@ -318,7 +317,6 @@ export function SessionWorkspace({
     flushTranscript,
     isLoading,
     isRunning,
-    maxSessionDurationMs,
     registerVideoFrameProvider,
     sessionId,
     start,
@@ -462,16 +460,6 @@ export function SessionWorkspace({
   const handleStartSession = useCallback(() => {
     if (!authSession) {
       setAccountNotice("请先登录后再开始训练。");
-      setAccountPanelOpen(true);
-      return;
-    }
-    if (authSession.quota.activeSessionId) {
-      setAccountNotice("这个账号已有训练进行中，请先结束当前训练。");
-      setAccountPanelOpen(true);
-      return;
-    }
-    if (authSession.quota.remainingMs <= 0) {
-      setAccountNotice("今日免费额度已用完，可以升级到 30 元/月解锁每日 120 分钟。");
       setAccountPanelOpen(true);
       return;
     }
@@ -806,20 +794,6 @@ export function SessionWorkspace({
     stopQA,
     stopReplayCapture,
   ]);
-
-  useEffect(() => {
-    if (!isRunning || maxSessionDurationMs <= 0) {
-      quotaAutoFinishRef.current = false;
-      return;
-    }
-    if (elapsedSeconds * 1000 < maxSessionDurationMs || quotaAutoFinishRef.current) {
-      return;
-    }
-    quotaAutoFinishRef.current = true;
-    setAccountNotice("已达到今日训练额度，本次训练会自动结束并生成报告。");
-    setAccountPanelOpen(true);
-    finishSession();
-  }, [elapsedSeconds, finishSession, isRunning, maxSessionDurationMs]);
 
   const activeCoachProfileId = qaState.enabled
     ? (qaState.voiceProfileId ?? selectedCoachProfileId)

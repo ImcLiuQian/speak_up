@@ -126,8 +126,6 @@ export interface RealtimeSession {
 
 export interface RealtimeSessionResponse extends RealtimeSession {
   websocketUrl: string;
-  quota: AccountQuota | null;
-  maxSessionDurationMs: number;
 }
 
 export interface RealtimeEvent {
@@ -199,25 +197,12 @@ export function uploadSessionReplayMedia(
 export interface AccountUser {
   email: string;
   displayName: string;
-  plan: "free" | "paid";
-  paidUntil: string | null;
   createdAt: string | null;
-}
-
-export interface AccountQuota {
-  date: string;
-  limitMs: number;
-  completedMs: number;
-  remainingMs: number;
-  activeSessionId: string | null;
-  activeStartedAt: string | null;
 }
 
 export interface AuthSession {
   token: string;
   user: AccountUser;
-  quota: AccountQuota;
-  priceCny: number;
 }
 
 export function loginWithPassword(account: string, password: string) {
@@ -229,13 +214,6 @@ export function loginWithPassword(account: string, password: string) {
 
 export function getCurrentAccount(token: string) {
   return request<AuthSession>("/api/auth/me", {
-    headers: buildAuthHeaders(token),
-  });
-}
-
-export function subscribeAccount(token: string) {
-  return request<AuthSession>("/api/billing/subscribe", {
-    method: "POST",
     headers: buildAuthHeaders(token),
   });
 }

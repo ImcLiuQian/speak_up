@@ -75,33 +75,21 @@ class PublicRequestOriginTest(unittest.IsolatedAsyncioTestCase):
         async def fake_current_account() -> dict:
             return {
                 "token": "secret-token",
-                "user": {"email": "tester@example.com", "displayName": "Tester", "plan": "free"},
+                "user": {"email": "tester@example.com", "displayName": "Tester"},
             }
 
         app.dependency_overrides[require_current_account] = fake_current_account
-        reservation = {
-            "maxSessionDurationMs": 600000,
-            "quota": {
-                "date": "2026-05-27",
-                "limitMs": 600000,
-                "completedMs": 0,
-                "remainingMs": 600000,
-                "activeSessionId": "session-1",
-                "activeStartedAt": "2026-05-27T12:00:00Z",
-            },
-        }
         session = SessionRecord(
             session_id="session-1",
             scenario_id="general",
             language="zh",
             coach_profile_id="warm_voice_coach",
             user_email="tester@example.com",
-            quota_limit_ms=600000,
         )
 
         with (
             patch.dict(os.environ, {"SPEAK_UP_WEBSOCKET_TOKEN_IN_QUERY": "false"}),
-            patch.object(auth_service, "reserve_session", new=AsyncMock(return_value=reservation)),
+            patch.object(auth_service, "reserve_session", new=AsyncMock(return_value=None)),
             patch.object(session_manager, "create_session", return_value=session),
             patch.object(session_manager.report_job_service, "register_session", new=AsyncMock()),
         ):

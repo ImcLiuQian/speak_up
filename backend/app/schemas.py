@@ -19,7 +19,6 @@ TranscriptSpeaker = Literal["user", "coach"]
 SessionStatus = Literal["created", "streaming", "finished"]
 VoiceGender = Literal["male", "female"]
 VoiceStyle = Literal["professional", "gentle", "firm", "encouraging"]
-AccountPlan = Literal["free", "paid"]
 ReportStatus = Literal["processing", "ready", "failed"]
 ReportSectionPhase = Literal["processing", "ready"]
 ReportProgressStepPhase = Literal["pending", "active", "done", "failed"]
@@ -156,18 +155,7 @@ class VoiceProfile(BaseModel):
 class AccountUser(BaseModel):
     email: str
     displayName: str
-    plan: AccountPlan = "free"
-    paidUntil: str | None = None
     createdAt: str | None = None
-
-
-class AccountQuota(BaseModel):
-    date: str
-    limitMs: int
-    completedMs: int
-    remainingMs: int
-    activeSessionId: str | None = None
-    activeStartedAt: str | None = None
 
 
 class AuthLoginRequest(BaseModel):
@@ -178,8 +166,6 @@ class AuthLoginRequest(BaseModel):
 class AuthSessionResponse(BaseModel):
     token: str
     user: AccountUser
-    quota: AccountQuota
-    priceCny: int = 30
 
 
 class DocumentPreview(BaseModel):
@@ -357,8 +343,6 @@ class RealtimeSession(BaseModel):
 
 class RealtimeSessionResponse(RealtimeSession):
     websocketUrl: str
-    quota: AccountQuota | None = None
-    maxSessionDurationMs: int = 0
 
 
 class ReplayCoachInsight(BaseModel):

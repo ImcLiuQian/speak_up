@@ -136,11 +136,6 @@ async def get_current_account(current_account: dict = Depends(require_current_ac
     return AuthSessionResponse.model_validate(current_account)
 
 
-@app.post("/api/billing/subscribe", response_model=AuthSessionResponse)
-async def subscribe_account(current_account: dict = Depends(require_current_account)) -> AuthSessionResponse:
-    return AuthSessionResponse.model_validate(await auth_service.subscribe(token=current_account["token"]))
-
-
 async def _require_session_owner(session_id: str, current_account: dict) -> None:
     current_email = current_account["user"]["email"]
     active_session = session_manager.get_session(session_id)
@@ -260,7 +255,7 @@ async def start_session(
 ) -> RealtimeSessionResponse:
     session_id = uuid4().hex
     user_email = current_account["user"]["email"]
-    quota_reservation = await auth_service.reserve_session(email=user_email, session_id=session_id)
+    await auth_service.reserve_session(email=user_email, session_id=session_id)
     try:
         session = session_manager.create_session(
             payload.scenarioId,
@@ -268,7 +263,6 @@ async def start_session(
             payload.coachProfileId,
             user_email=user_email,
             session_id=session_id,
-            quota_limit_ms=quota_reservation["maxSessionDurationMs"],
         )
         await session_manager.report_job_service.register_session(
             session_id=session.session_id,
@@ -278,14 +272,12 @@ async def start_session(
             user_email=user_email,
         )
     except Exception:
-        await auth_service.complete_session(email=user_email, session_id=session_id, duration_ms=0)
+        await auth_service.release_session(email=user_email, session_id=session_id)
         raise
     websocket_url = _build_websocket_url(request, session.session_id, current_account["token"])
     return RealtimeSessionResponse(
         **session.to_schema().model_dump(),
         websocketUrl=websocket_url,
-        quota=quota_reservation["quota"],
-        maxSessionDurationMs=quota_reservation["maxSessionDurationMs"],
     )
 
 
@@ -315,10 +307,9 @@ async def finish_session(
     session = await session_manager.finish_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    await auth_service.complete_session(
+    await auth_service.release_session(
         email=session.user_email,
         session_id=session.session_id,
-        duration_ms=session.finished_duration_ms,
     )
     return session.to_schema()
 

@@ -1,14 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import {
-  clearStoredAuthToken,
-  saveStoredAuthToken,
-  subscribeAccount,
-  type AuthSession,
-} from "@/lib/api";
+import { clearStoredAuthToken, type AuthSession } from "@/lib/api";
 import { InternalAccountAuthForm } from "@/components/session/internal-account-auth-form";
 
 interface AccountSettingsButtonProps {
@@ -37,21 +32,6 @@ function buildInitials(name: string) {
   return trimmed.slice(0, 2);
 }
 
-function formatMinutes(ms: number) {
-  return `${Math.max(0, Math.floor(ms / 60000))} 分钟`;
-}
-
-function formatPaidUntil(value: string | null) {
-  if (!value) {
-    return null;
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
 export function AccountSettingsButton({
   authSession,
   loading = false,
@@ -60,33 +40,12 @@ export function AccountSettingsButton({
   onOpenChange,
   onSessionChange,
 }: AccountSettingsButtonProps) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const accountName = authSession?.user.displayName ?? "";
   const initials = useMemo(() => buildInitials(accountName), [accountName]);
-  const paidUntil = formatPaidUntil(authSession?.user.paidUntil ?? null);
 
   const handleLogout = () => {
     clearStoredAuthToken();
     onSessionChange(null);
-    setError(null);
-  };
-
-  const handleSubscribe = async () => {
-    if (!authSession) {
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const nextSession = await subscribeAccount(authSession.token);
-      saveStoredAuthToken(nextSession.token);
-      onSessionChange(nextSession);
-    } catch (subscribeError) {
-      setError(subscribeError instanceof Error ? subscribeError.message : "模拟付费失败");
-    } finally {
-      setBusy(false);
-    }
   };
 
   return (
@@ -97,7 +56,7 @@ export function AccountSettingsButton({
             <div>
               <p className="text-sm font-semibold text-slate-950">账号与设置</p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
-                登录后才能开始训练，系统会按账号统计每日视频时长。
+                登录后可以开始训练，训练记录会归属到你的账号。
               </p>
             </div>
             <button
@@ -128,46 +87,6 @@ export function AccountSettingsButton({
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-2 text-xs text-slate-500">
-                <div className="flex items-center justify-between rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                  <span>当前套餐</span>
-                  <span className="font-semibold text-slate-800">
-                    {authSession.user.plan === "paid" ? "付费版" : "免费版"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                  <span>今日已用</span>
-                  <span className="font-semibold text-slate-800">{formatMinutes(authSession.quota.completedMs)}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                  <span>今日剩余</span>
-                  <span className="font-semibold text-emerald-700">{formatMinutes(authSession.quota.remainingMs)}</span>
-                </div>
-                {paidUntil ? (
-                  <div className="flex items-center justify-between rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    <span>有效期至</span>
-                    <span className="font-semibold text-slate-800">{paidUntil}</span>
-                  </div>
-                ) : null}
-              </div>
-
-              {authSession.user.plan !== "paid" ? (
-                <button
-                  type="button"
-                  disabled={busy || loading}
-                  onClick={handleSubscribe}
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(109,40,217,0.22)] transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  30 元/月解锁每日 120 分钟
-                </button>
-              ) : null}
-
-              {error ? (
-                <p className="mt-3 rounded-[14px] bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
-                  {error}
-                </p>
-              ) : null}
-
               <button
                 type="button"
                 onClick={handleLogout}
@@ -182,7 +101,6 @@ export function AccountSettingsButton({
               tone="slate"
               loading={loading}
               onSessionChange={(session) => {
-                setError(null);
                 onSessionChange(session);
               }}
             />

@@ -16,10 +16,6 @@ from pathlib import Path
 from fastapi import HTTPException, Request
 
 
-FREE_DAILY_LIMIT_MS = 10 * 60 * 1000
-PAID_DAILY_LIMIT_MS = 120 * 60 * 1000
-SUBSCRIPTION_PRICE_CNY = 30
-SUBSCRIPTION_DAYS = 30
 AUTH_TOKEN_COOKIE_NAME = "speak_up_auth_token"
 SAFE_COOKIE_AUTH_METHODS = {"GET", "HEAD", "OPTIONS"}
 AUTH_SESSION_DAYS = 30
@@ -70,7 +66,7 @@ class AuthService:
                         display_name=str(account_config.get("displayName") or self._default_display_name(normalized_account)),
                     )
                 token = self._issue_session(connection, normalized_account)
-                payload = self._build_auth_payload(connection, user, token)
+                payload = self._build_auth_payload(user, token)
                 connection.commit()
                 return payload
 
@@ -84,7 +80,7 @@ class AuthService:
             with self._connect() as connection:
                 row = connection.execute(
                     """
-                    SELECT u.email, u.display_name, u.password_hash, u.token, u.plan, u.paid_until, u.created_at,
+                    SELECT u.email, u.display_name, u.password_hash, u.token, u.created_at,
                         s.expires_at AS session_expires_at
                     FROM auth_sessions s
                     JOIN users u ON u.email = s.email
@@ -104,32 +100,11 @@ class AuthService:
                     "UPDATE auth_sessions SET last_seen_at = ? WHERE token_hash = ?",
                     (self._now_iso(), token_hash),
                 )
-                payload = self._build_auth_payload(connection, self._row_to_user(row), stripped_token)
+                payload = self._build_auth_payload(self._row_to_user(row), stripped_token)
                 connection.commit()
                 return payload
 
-    async def subscribe(self, *, token: str) -> dict:
-        account = await self.get_account_by_token(token)
-        email = account["user"]["email"]
-        paid_until = self._now() + timedelta(days=SUBSCRIPTION_DAYS)
-
-        async with self._lock:
-            with self._connect() as connection:
-                user = self._get_user_by_email(connection, email)
-                if not user:
-                    raise HTTPException(status_code=404, detail="账号不存在，请重新登录。")
-                connection.execute(
-                    "UPDATE users SET plan = ?, paid_until = ? WHERE email = ?",
-                    ("paid", paid_until.isoformat(), email),
-                )
-                next_user = dict(user)
-                next_user["plan"] = "paid"
-                next_user["paidUntil"] = paid_until.isoformat()
-                payload = self._build_auth_payload(connection, next_user, token)
-                connection.commit()
-                return payload
-
-    async def reserve_session(self, *, email: str, session_id: str) -> dict:
+    async def reserve_session(self, *, email: str, session_id: str) -> None:
         normalized_email = self._normalize_account(email)
         async with self._lock:
             with self._connect() as connection:
@@ -137,73 +112,40 @@ class AuthService:
                 if not user:
                     raise HTTPException(status_code=401, detail="请先登录。")
 
-                day_usage = self._get_day_usage(connection, normalized_email)
-                if day_usage.get("activeSessionId"):
+                active_session = connection.execute(
+                    "SELECT session_id FROM active_sessions WHERE email = ?",
+                    (normalized_email,),
+                ).fetchone()
+                if active_session is not None:
                     raise HTTPException(status_code=409, detail="已有训练进行中，请先结束当前训练。")
 
-                quota = self._build_quota(user, day_usage)
-                if quota["remainingMs"] <= 0:
-                    raise HTTPException(status_code=403, detail="今日训练额度已用完，请升级后继续。")
-
-                now = self._now_iso()
                 connection.execute(
                     """
-                    UPDATE usage_daily
-                    SET active_session_id = ?, active_started_at = ?
-                    WHERE email = ? AND usage_date = ?
+                    INSERT INTO active_sessions(email, session_id, started_at)
+                    VALUES (?, ?, ?)
                     """,
-                    (session_id, now, normalized_email, self._today_key()),
+                    (normalized_email, session_id, self._now_iso()),
                 )
                 connection.commit()
-                day_usage["activeSessionId"] = session_id
-                day_usage["activeStartedAt"] = now
-                quota = self._build_quota(user, day_usage)
-                return {
-                    "quota": quota,
-                    "maxSessionDurationMs": quota["remainingMs"],
-                }
 
-    async def complete_session(self, *, email: str | None, session_id: str, duration_ms: int) -> dict | None:
+    async def release_session(self, *, email: str | None, session_id: str) -> None:
         if not email:
-            return None
+            return
 
         normalized_email = self._normalize_account(email)
         async with self._lock:
             with self._connect() as connection:
-                user = self._get_user_by_email(connection, normalized_email)
-                if not user:
-                    return None
-
-                day_usage = self._get_day_usage(connection, normalized_email)
-                if day_usage.get("activeSessionId") == session_id:
-                    completed_before_ms = max(0, int(day_usage.get("completedMs") or 0))
-                    quota = self._build_quota(user, day_usage)
-                    chargeable_duration_ms = min(
-                        max(0, int(duration_ms)),
-                        max(0, int(quota["limitMs"]) - completed_before_ms),
-                    )
-                    completed_ms = completed_before_ms + chargeable_duration_ms
-                    connection.execute(
-                        """
-                        UPDATE usage_daily
-                        SET completed_ms = ?, active_session_id = NULL, active_started_at = NULL
-                        WHERE email = ? AND usage_date = ?
-                        """,
-                        (completed_ms, normalized_email, self._today_key()),
-                    )
-                    connection.commit()
-                    day_usage["completedMs"] = completed_ms
-                    day_usage["activeSessionId"] = None
-                    day_usage["activeStartedAt"] = None
-                quota = self._build_quota(user, day_usage)
+                connection.execute(
+                    "DELETE FROM active_sessions WHERE email = ? AND session_id = ?",
+                    (normalized_email, session_id),
+                )
                 connection.commit()
-                return quota
 
     def _ensure_storage(self) -> None:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as connection:
             self._ensure_sqlite_storage(connection)
-            connection.execute("UPDATE usage_daily SET active_session_id = NULL, active_started_at = NULL")
+            connection.execute("DELETE FROM active_sessions")
             connection.commit()
 
     @contextmanager
@@ -224,8 +166,6 @@ class AuthService:
                 display_name TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
                 token TEXT NOT NULL UNIQUE,
-                plan TEXT NOT NULL DEFAULT 'free',
-                paid_until TEXT,
                 created_at TEXT NOT NULL
             );
 
@@ -237,13 +177,10 @@ class AuthService:
                 last_seen_at TEXT NOT NULL
             );
 
-            CREATE TABLE IF NOT EXISTS usage_daily (
-                email TEXT NOT NULL,
-                usage_date TEXT NOT NULL,
-                completed_ms INTEGER NOT NULL DEFAULT 0,
-                active_session_id TEXT,
-                active_started_at TEXT,
-                PRIMARY KEY (email, usage_date)
+            CREATE TABLE IF NOT EXISTS active_sessions (
+                email TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                started_at TEXT NOT NULL
             );
 
             CREATE INDEX IF NOT EXISTS idx_users_token ON users(token);
@@ -251,69 +188,24 @@ class AuthService:
             """
         )
 
-    def _build_auth_payload(self, connection: _DatabaseConnection, user: dict, token: str) -> dict:
-        day_usage = self._get_day_usage(connection, str(user["email"]))
+    def _build_auth_payload(self, user: dict, token: str) -> dict:
         return {
             "token": token,
             "user": self._public_user(user),
-            "quota": self._build_quota(user, day_usage),
-            "priceCny": SUBSCRIPTION_PRICE_CNY,
         }
 
     def _public_user(self, user: dict) -> dict:
-        paid_active = self._is_paid_active(user)
         return {
             "email": user["email"],
             "displayName": user["displayName"],
-            "plan": "paid" if paid_active else "free",
-            "paidUntil": user.get("paidUntil") if paid_active else None,
             "createdAt": user.get("createdAt"),
         }
-
-    def _build_quota(self, user: dict, day_usage: dict) -> dict:
-        limit_ms = PAID_DAILY_LIMIT_MS if self._is_paid_active(user) else FREE_DAILY_LIMIT_MS
-        completed_ms = max(0, int(day_usage.get("completedMs") or 0))
-        return {
-            "date": self._today_key(),
-            "limitMs": limit_ms,
-            "completedMs": completed_ms,
-            "remainingMs": max(0, limit_ms - completed_ms),
-            "activeSessionId": day_usage.get("activeSessionId"),
-            "activeStartedAt": day_usage.get("activeStartedAt"),
-        }
-
-    def _get_day_usage(self, connection: _DatabaseConnection, email: str) -> dict:
-        day_key = self._today_key()
-        self._ensure_day_usage_row(connection, email, day_key)
-        row = connection.execute(
-            """
-            SELECT completed_ms, active_session_id, active_started_at
-            FROM usage_daily
-            WHERE email = ? AND usage_date = ?
-            """,
-            (email, day_key),
-        ).fetchone()
-        return {
-            "completedMs": int(row["completed_ms"] or 0),
-            "activeSessionId": row["active_session_id"],
-            "activeStartedAt": row["active_started_at"],
-        }
-
-    @staticmethod
-    def _ensure_day_usage_row(connection: _DatabaseConnection, email: str, day_key: str) -> None:
-        connection.execute(
-            """
-            INSERT OR IGNORE INTO usage_daily(email, usage_date, completed_ms, active_session_id, active_started_at)
-            VALUES (?, ?, 0, NULL, NULL)
-            """,
-            (email, day_key),
-        )
 
     @staticmethod
     def _get_user_by_email(connection: _DatabaseConnection, email: str) -> dict | None:
         row = connection.execute(
             """
-            SELECT email, display_name, password_hash, token, plan, paid_until, created_at
+            SELECT email, display_name, password_hash, token, created_at
             FROM users
             WHERE email = ?
             """,
@@ -328,8 +220,6 @@ class AuthService:
             "displayName": row["display_name"],
             "passwordHash": row["password_hash"],
             "token": row["token"],
-            "plan": row["plan"],
-            "paidUntil": row["paid_until"],
             "createdAt": row["created_at"],
         }
 
@@ -341,22 +231,18 @@ class AuthService:
             "displayName": display_name,
             "passwordHash": "",
             "token": legacy_token,
-            "plan": "free",
-            "paidUntil": None,
             "createdAt": now,
         }
         connection.execute(
             """
-            INSERT INTO users(email, display_name, password_hash, token, plan, paid_until, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users(email, display_name, password_hash, token, created_at)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 user["email"],
                 user["displayName"],
                 user["passwordHash"],
                 user["token"],
-                user["plan"],
-                user["paidUntil"],
                 user["createdAt"],
             ),
         )
@@ -426,13 +312,6 @@ class AuthService:
         return "内测用户"
 
     @staticmethod
-    def _is_paid_active(user: dict) -> bool:
-        if user.get("plan") != "paid" or not user.get("paidUntil"):
-            return False
-        paid_until = AuthService._parse_datetime(user.get("paidUntil"))
-        return bool(paid_until and paid_until > datetime.now().astimezone())
-
-    @staticmethod
     def _parse_datetime(value: object) -> datetime | None:
         try:
             return datetime.fromisoformat(str(value))
@@ -445,9 +324,6 @@ class AuthService:
 
     def _now_iso(self) -> str:
         return self._now().isoformat()
-
-    def _today_key(self) -> str:
-        return self._now().date().isoformat()
 
     @staticmethod
     def _int_env(name: str, default: int) -> int:

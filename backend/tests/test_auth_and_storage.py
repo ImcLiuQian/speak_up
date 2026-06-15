@@ -9,7 +9,7 @@ from unittest.mock import patch
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 
-from app.services.auth_service import AuthService, FREE_DAILY_LIMIT_MS, PAID_DAILY_LIMIT_MS
+from app.services.auth_service import AuthService
 from app.services.object_storage_service import ObjectStorageService
 
 TEST_ACCOUNT = "beta-tester"
@@ -45,7 +45,7 @@ class AuthServiceTest(unittest.IsolatedAsyncioTestCase):
         self.env_patch.stop()
         self.temp_dir.cleanup()
 
-    async def test_internal_account_login_and_quota(self) -> None:
+    async def test_internal_account_login_and_active_session(self) -> None:
         with self.assertRaises(HTTPException) as login_error:
             await self.service.login(account=TEST_ACCOUNT, password="wrong")
         self.assertEqual(login_error.exception.status_code, 401)
@@ -53,7 +53,8 @@ class AuthServiceTest(unittest.IsolatedAsyncioTestCase):
         logged_in = await self.service.login(account=TEST_ACCOUNT, password=TEST_PASSWORD)
         self.assertEqual(logged_in["user"]["email"], TEST_ACCOUNT)
         self.assertEqual(logged_in["user"]["displayName"], TEST_DISPLAY_NAME)
-        self.assertEqual(logged_in["quota"]["limitMs"], FREE_DAILY_LIMIT_MS)
+        self.assertNotIn("quota", logged_in)
+        self.assertNotIn("plan", logged_in["user"])
         self.assertNotIn("passwordHash", logged_in["user"])
 
         second_login = await self.service.login(account=TEST_ACCOUNT, password=TEST_PASSWORD)
@@ -69,33 +70,21 @@ class AuthServiceTest(unittest.IsolatedAsyncioTestCase):
             await self.service.get_account_by_token(legacy_token)
         self.assertEqual(legacy_error.exception.status_code, 401)
 
-        first_reservation = await self.service.reserve_session(email=TEST_ACCOUNT, session_id="s1")
-        self.assertEqual(first_reservation["maxSessionDurationMs"], FREE_DAILY_LIMIT_MS)
+        await self.service.reserve_session(email=TEST_ACCOUNT, session_id="s1")
 
         with self.assertRaises(HTTPException) as active_error:
             await self.service.reserve_session(email=TEST_ACCOUNT, session_id="s2")
         self.assertEqual(active_error.exception.status_code, 409)
 
-        quota = await self.service.complete_session(email=TEST_ACCOUNT, session_id="s1", duration_ms=180000)
-        self.assertEqual(quota["completedMs"], 180000)
-        self.assertEqual(quota["remainingMs"], FREE_DAILY_LIMIT_MS - 180000)
+        await self.service.release_session(email=TEST_ACCOUNT, session_id="wrong-session")
+        with self.assertRaises(HTTPException) as still_active_error:
+            await self.service.reserve_session(email=TEST_ACCOUNT, session_id="s2")
+        self.assertEqual(still_active_error.exception.status_code, 409)
 
+        await self.service.release_session(email=TEST_ACCOUNT, session_id="s1")
         await self.service.reserve_session(email=TEST_ACCOUNT, session_id="s2")
-        quota = await self.service.complete_session(
-            email=TEST_ACCOUNT,
-            session_id="s2",
-            duration_ms=FREE_DAILY_LIMIT_MS,
-        )
-        self.assertEqual(quota["completedMs"], FREE_DAILY_LIMIT_MS)
-        self.assertEqual(quota["remainingMs"], 0)
-
-        with self.assertRaises(HTTPException) as exhausted_error:
-            await self.service.reserve_session(email=TEST_ACCOUNT, session_id="s3")
-        self.assertEqual(exhausted_error.exception.status_code, 403)
-
-        paid = await self.service.subscribe(token=second_login["token"])
-        self.assertEqual(paid["user"]["plan"], "paid")
-        self.assertEqual(paid["quota"]["limitMs"], PAID_DAILY_LIMIT_MS)
+        await self.service.release_session(email=TEST_ACCOUNT, session_id="s2")
+        await self.service.release_session(email=None, session_id="s3")
 
     async def test_internal_account_pool_must_be_configured(self) -> None:
         with patch.dict(os.environ, {"SPEAK_UP_INTERNAL_ACCOUNTS": ""}, clear=False):
@@ -129,7 +118,7 @@ class AuthServiceTest(unittest.IsolatedAsyncioTestCase):
                 login_payload = login_response.json()
                 self.assertEqual(login_payload["user"]["email"], TEST_ACCOUNT)
                 self.assertEqual(login_payload["user"]["displayName"], TEST_DISPLAY_NAME)
-                self.assertEqual(login_payload["quota"]["limitMs"], FREE_DAILY_LIMIT_MS)
+                self.assertNotIn("quota", login_payload)
 
                 me_response = await client.get(
                     "/api/auth/me",
@@ -142,6 +131,7 @@ class AuthServiceTest(unittest.IsolatedAsyncioTestCase):
                     ("GET", "/api/auth/captcha"),
                     ("POST", "/api/auth/email-code"),
                     ("POST", "/api/auth/register"),
+                    ("POST", "/api/billing/subscribe"),
                 )
                 for method, path in removed_auth_paths:
                     response = await client.request(method, path, json={})
