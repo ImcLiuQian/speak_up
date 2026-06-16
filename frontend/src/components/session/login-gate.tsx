@@ -81,9 +81,27 @@ const distantBars = Array.from({ length: 36 }, (_, index) => Math.round(4 + Math
 export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) {
   return (
     <main className="relative flex min-h-[100dvh] items-start justify-center overflow-hidden bg-[#e9edf4] px-3 pb-20 pt-8 text-slate-950 sm:px-5 lg:px-6 min-[1500px]:pt-[54px]">
-      <section className="mx-auto grid h-auto min-h-[690px] w-full max-w-[1560px] overflow-hidden rounded-[30px] bg-white shadow-[0_30px_96px_rgba(38,48,73,0.18)] xl:h-[min(842px,calc(100dvh-76px))] xl:grid-cols-[minmax(420px,0.405fr)_minmax(0,0.595fr)]">
-        <aside className="flex min-h-[690px] items-center justify-center px-8 py-12 sm:px-12 lg:px-16 xl:min-h-0 xl:px-[88px]">
-          <section className="w-full max-w-[420px]">
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_14%,rgba(255,255,255,0.92)_0%,rgba(255,255,255,0)_34%),radial-gradient(circle_at_80%_18%,rgba(217,226,246,0.68)_0%,rgba(217,226,246,0)_36%),linear-gradient(135deg,#edf3fb_0%,#e5ebf4_52%,#dde6f1_100%)]"
+        aria-hidden="true"
+      />
+      <section className="relative z-10 mx-auto grid h-auto min-h-[690px] w-full max-w-[1560px] overflow-hidden rounded-[30px] bg-white shadow-[0_30px_96px_rgba(38,48,73,0.18)] xl:h-[min(842px,calc(100dvh-76px))] xl:grid-cols-[minmax(420px,0.405fr)_minmax(0,0.595fr)]">
+        <aside className="relative flex min-h-[690px] items-center justify-center overflow-hidden bg-[#f8fbff] px-8 py-12 sm:px-12 lg:px-16 xl:min-h-0 xl:px-[88px]">
+          <Image
+            src="/landing-assets/login-page-background.png"
+            alt=""
+            fill
+            priority
+            unoptimized
+            sizes="(min-width: 1280px) 640px, 100vw"
+            className="pointer-events-none select-none object-cover object-left"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.04)_48%,rgba(234,221,255,0.18)_100%)]"
+            aria-hidden="true"
+          />
+          <section className="relative z-10 w-full max-w-[420px]">
             <div className="flex items-center gap-5">
               <span className="relative h-[72px] w-[72px] overflow-hidden rounded-[18px] shadow-[0_18px_36px_rgba(126,50,255,0.24)]">
                 <Image
