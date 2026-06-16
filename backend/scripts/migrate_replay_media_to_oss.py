@@ -15,11 +15,18 @@ from app.services.object_storage_service import object_storage_service
 from app.services.replay_service import ReplayService
 
 
-async def migrate_report_root(report_root: Path, *, dry_run: bool, delete_local: bool = False) -> int:
+async def migrate_report_root(
+    report_root: Path,
+    *,
+    dry_run: bool,
+    delete_local: bool = False,
+    allow_missing: bool = False,
+) -> int:
     if not object_storage_service.enabled:
         raise RuntimeError("Set SPEAK_UP_STORAGE_DRIVER=oss before running this migration.")
 
     migrated = 0
+    skipped: list[str] = []
     for meta_path in sorted(report_root.glob("*/replay_media.json")):
         session_dir = meta_path.parent
         payload = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -28,9 +35,11 @@ async def migrate_report_root(report_root: Path, *, dry_run: bool, delete_local:
 
         file_name = str(payload.get("fileName") or "").strip()
         if not file_name:
+            skipped.append(f"{session_dir.name}: replay_media.json missing fileName")
             continue
         media_path = session_dir / file_name
         if not media_path.exists():
+            skipped.append(f"{session_dir.name}: missing {file_name}")
             continue
 
         session_id = session_dir.name
@@ -62,6 +71,12 @@ async def migrate_report_root(report_root: Path, *, dry_run: bool, delete_local:
             media_path.unlink(missing_ok=True)
         migrated += 1
 
+    if skipped:
+        for item in skipped:
+            print(f"skipped {item}")
+        if not allow_missing:
+            raise RuntimeError(f"Skipped {len(skipped)} replay media record(s); rerun with --allow-missing to ignore.")
+
     return migrated
 
 
@@ -78,6 +93,11 @@ def main() -> None:
         action="store_true",
         help="Delete local replay_media.* after a successful OSS upload and metadata rewrite.",
     )
+    parser.add_argument(
+        "--allow-missing",
+        action="store_true",
+        help="Do not fail when replay metadata references a missing local media file.",
+    )
     args = parser.parse_args()
 
     migrated = asyncio.run(
@@ -85,6 +105,7 @@ def main() -> None:
             Path(args.report_root),
             dry_run=args.dry_run,
             delete_local=args.delete_local,
+            allow_missing=args.allow_missing,
         )
     )
     print(f"{'candidate' if args.dry_run else 'migrated'} files: {migrated}")

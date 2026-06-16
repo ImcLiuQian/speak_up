@@ -132,6 +132,32 @@ class ReplayMigrationTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(json.loads(meta_path.read_text(encoding="utf-8")), original_meta)
             self.assertTrue(media_path.exists())
 
+    async def test_missing_media_fails_unless_allowed(self) -> None:
+        module = load_migration_module()
+        module.object_storage_service = FakeObjectStorageService()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            session_dir = Path(temp_dir) / "session-1"
+            session_dir.mkdir()
+            (session_dir / "replay_media.json").write_text(
+                json.dumps(
+                    {
+                        "storage": "local",
+                        "fileName": "replay_media.webm",
+                        "mediaType": "video",
+                        "contentType": "video/webm",
+                        "durationMs": 0,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "Skipped 1 replay media record"):
+                await module.migrate_report_root(Path(temp_dir), dry_run=True)
+
+            migrated = await module.migrate_report_root(Path(temp_dir), dry_run=True, allow_missing=True)
+            self.assertEqual(migrated, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
