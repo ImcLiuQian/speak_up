@@ -15,7 +15,7 @@ from app.services.object_storage_service import object_storage_service
 from app.services.replay_service import ReplayService
 
 
-async def migrate_report_root(report_root: Path, *, dry_run: bool) -> int:
+async def migrate_report_root(report_root: Path, *, dry_run: bool, delete_local: bool = False) -> int:
     if not object_storage_service.enabled:
         raise RuntimeError("Set SPEAK_UP_STORAGE_DRIVER=oss before running this migration.")
 
@@ -58,7 +58,8 @@ async def migrate_report_root(report_root: Path, *, dry_run: bool) -> int:
             duration_ms=max(0, int(payload.get("durationMs") or 0)),
         )
         meta_path.write_text(json.dumps(next_meta, ensure_ascii=False, indent=2), encoding="utf-8")
-        media_path.unlink(missing_ok=True)
+        if delete_local:
+            media_path.unlink(missing_ok=True)
         migrated += 1
 
     return migrated
@@ -72,9 +73,20 @@ def main() -> None:
         help="Report data root containing per-session replay_media.json files.",
     )
     parser.add_argument("--dry-run", action="store_true", help="List files that would be migrated without uploading.")
+    parser.add_argument(
+        "--delete-local",
+        action="store_true",
+        help="Delete local replay_media.* after a successful OSS upload and metadata rewrite.",
+    )
     args = parser.parse_args()
 
-    migrated = asyncio.run(migrate_report_root(Path(args.report_root), dry_run=args.dry_run))
+    migrated = asyncio.run(
+        migrate_report_root(
+            Path(args.report_root),
+            dry_run=args.dry_run,
+            delete_local=args.delete_local,
+        )
+    )
     print(f"{'candidate' if args.dry_run else 'migrated'} files: {migrated}")
 
 

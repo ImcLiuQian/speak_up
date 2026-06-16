@@ -78,6 +78,12 @@ SPEAK_UP_AUTH_DB_PATH=/opt/speak_up/backend/output/auth_data/auth.sqlite3
 SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"account-id","password":"password","displayName":"内测用户"}]'
 ```
 
+当前内测账号身份由生产环境的 `SPEAK_UP_INTERNAL_ACCOUNTS` 管理，口令只放在服务器密钥环境里，不提交到仓库。已配置的测试账号身份：
+
+```text
+test_user -> 测试用户
+```
+
 Replay video storage can still use Aliyun OSS. Keep these settings if replay media should survive ECS disk cleanup or be served through a private bucket:
 
 ```bash

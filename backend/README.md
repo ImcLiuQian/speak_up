@@ -70,7 +70,7 @@ SPEAK_UP_OSS_ACCESS_KEY_SECRET=... \
 .venv/bin/python scripts/migrate_replay_media_to_oss.py --report-root output/report_data
 ```
 
-迁移脚本会上传 `replay_media.*`，把 `replay_media.json` 改为 OSS 元数据，并删除 ECS 上已迁移的媒体文件。
+迁移脚本会上传 `replay_media.*` 并把 `replay_media.json` 改为 OSS 元数据。默认会保留 ECS 本地媒体文件作为备份；确认 OSS 回放可用后，再追加 `--delete-local` 清理已迁移的本地媒体文件。
 
 ## WebSocket API
 
