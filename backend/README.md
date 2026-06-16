@@ -58,6 +58,20 @@ SPEAK_UP_OSS_PREFIX=speak-up
 
 `SPEAK_UP_OSS_PUBLIC_BASE_URL` 可为空；为空时回放接口会生成短期签名 URL，适合私有 bucket。本地开发时把 `SPEAK_UP_STORAGE_DRIVER` 保持为 `local` 即可。
 
+如果生产环境已经存在本地回放媒体，配置好 OSS 后可以迁移：
+
+```bash
+cd /srv/speak_up/backend
+SPEAK_UP_STORAGE_DRIVER=oss \
+SPEAK_UP_OSS_BUCKET=... \
+SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com \
+SPEAK_UP_OSS_ACCESS_KEY_ID=... \
+SPEAK_UP_OSS_ACCESS_KEY_SECRET=... \
+.venv/bin/python scripts/migrate_replay_media_to_oss.py --report-root output/report_data
+```
+
+迁移脚本会上传 `replay_media.*`，把 `replay_media.json` 改为 OSS 元数据，并删除 ECS 上已迁移的媒体文件。
+
 ## WebSocket API
 
 会话 WebSocket 路径是 `/ws/session/{session_id}`。同域部署默认用登录 cookie 完成 WebSocket 鉴权，服务端在连接时校验 session owner；只有显式设置 `SPEAK_UP_WEBSOCKET_TOKEN_IN_QUERY=true` 时，`POST /api/session/start` 返回的 `websocketUrl` 才会附带当前 token，用于跨域部署兜底。请求和事件结构定义在 `app/schemas.py` 的 `ClientMessage` 与事件模型中。

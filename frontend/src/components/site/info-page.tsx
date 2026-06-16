@@ -15,6 +15,7 @@ interface InfoPageProps {
   action?: {
     label: string;
     href: string;
+    external?: boolean;
   };
 }
 
@@ -41,6 +42,8 @@ export function InfoPage({ eyebrow, title, summary, sections, action }: InfoPage
         {action ? (
           <a
             href={action.href}
+            target={action.external ? "_blank" : undefined}
+            rel={action.external ? "noreferrer" : undefined}
             className="mt-8 inline-flex h-11 w-fit items-center justify-center rounded-full bg-violet-600 px-5 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(109,40,217,0.22)] transition hover:bg-violet-500"
           >
             {action.label}
