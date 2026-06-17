@@ -1,33 +1,22 @@
 import { InfoPage } from "@/components/site/info-page";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default function SurveyPage() {
-  const surveyUrl = process.env.SPEAK_UP_SURVEY_URL?.trim() || process.env.NEXT_PUBLIC_SURVEY_URL?.trim();
-  if (surveyUrl) {
-    redirect(surveyUrl);
-  }
+const DEFAULT_SURVEY_URL = "https://x1h3t1kti6o.feishu.cn/share/base/form/shrcnRuZl6UMP7oijTUoxKQVvLe";
 
-  const feedbackSubject = encodeURIComponent("Speak Up 使用反馈");
-  const feedbackBody = encodeURIComponent(
-    [
-      "我想反馈的训练场景：",
-      "",
-      "这次使用中最顺手的地方：",
-      "",
-      "最希望改进的地方：",
-      "",
-      "是否愿意参与后续访谈：",
-      "",
-    ].join("\n"),
-  );
+export default function SurveyPage() {
+  const surveyUrl = process.env.SPEAK_UP_SURVEY_URL?.trim() || process.env.NEXT_PUBLIC_SURVEY_URL?.trim() || DEFAULT_SURVEY_URL;
 
   return (
     <InfoPage
       eyebrow="产品反馈"
       title="问卷调查"
-      summary="这个入口用于收集真实训练反馈。你可以直接发邮件告诉我们练习场景、卡点和最想优先改进的功能。"
+      summary="这个入口用于收集真实训练反馈。你可以扫码填写，也可以点击按钮打开飞书问卷。"
+      visual={{
+        src: "/landing-assets/speakup-survey-qr.png",
+        alt: "Speak Up 问卷二维码",
+        caption: "打开飞书或浏览器扫码，提交后我们会按反馈类型整理到产品待办。",
+      }}
       sections={[
         {
           title: "反馈内容",
@@ -39,8 +28,9 @@ export default function SurveyPage() {
         },
       ]}
       action={{
-        label: "发送反馈邮件",
-        href: `mailto:liutian.6000@bytedance.com?subject=${feedbackSubject}&body=${feedbackBody}`,
+        label: "打开飞书问卷",
+        href: surveyUrl,
+        external: true,
       }}
     />
   );
