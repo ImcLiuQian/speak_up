@@ -1,6 +1,14 @@
 import { InfoPage } from "@/components/site/info-page";
+import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 export default function SurveyPage() {
+  const surveyUrl = process.env.NEXT_PUBLIC_SURVEY_URL?.trim();
+  if (surveyUrl) {
+    redirect(surveyUrl);
+  }
+
   const feedbackSubject = encodeURIComponent("Speak Up 使用反馈");
   const feedbackBody = encodeURIComponent(
     [

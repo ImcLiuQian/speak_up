@@ -1,5 +1,7 @@
 import { InfoPage } from "@/components/site/info-page";
 
+export const dynamic = "force-dynamic";
+
 export default function CommunityPage() {
   const discordUrl = process.env.NEXT_PUBLIC_DISCORD_URL?.trim();
   const requestSubject = encodeURIComponent("申请加入 Speak Up Discord 社区");

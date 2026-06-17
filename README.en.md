@@ -92,6 +92,8 @@ uvicorn app.main:app --reload
 
 During local development, the frontend tries to connect to `http://127.0.0.1:8000` and `http://localhost:8000`. In public deployments, it uses same-origin reverse-proxied `/api` and `/ws` paths by default. Set `NEXT_PUBLIC_API_BASE_URL` if you need a custom backend URL. Login session token hashes, plan state, and quota data are stored in SQLite by default.
 
+The footer survey entry shows the built-in feedback page by default. When a formal questionnaire platform URL is ready, set `NEXT_PUBLIC_SURVEY_URL` and `/survey` will redirect to it. The Discord entry works the same way through `NEXT_PUBLIC_DISCORD_URL`.
+
 Local account and replay storage configuration:
 
 ```bash

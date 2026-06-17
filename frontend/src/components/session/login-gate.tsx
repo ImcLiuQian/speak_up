@@ -80,25 +80,26 @@ const distantBars = Array.from({ length: 36 }, (_, index) => Math.round(4 + Math
 
 export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) {
   return (
-    <main className="relative flex min-h-[100dvh] items-start justify-center overflow-hidden bg-[#e9edf4] px-3 pb-20 pt-8 text-slate-950 sm:px-5 lg:px-6 min-[1500px]:pt-[54px]">
+    <main
+      className="relative flex min-h-[100dvh] items-start justify-center overflow-hidden bg-[#e9edf4] px-3 pb-20 pt-8 text-slate-950 sm:px-5 lg:px-6 min-[1500px]:pt-[54px]"
+      style={{
+        backgroundImage:
+          "linear-gradient(135deg, rgba(237, 243, 251, 0.78), rgba(222, 232, 245, 0.86)), url('/landing-assets/login-page-background.png')",
+        backgroundPosition: "center bottom",
+        backgroundSize: "cover",
+      }}
+    >
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_14%,rgba(255,255,255,0.92)_0%,rgba(255,255,255,0)_34%),radial-gradient(circle_at_80%_18%,rgba(217,226,246,0.68)_0%,rgba(217,226,246,0)_36%),linear-gradient(135deg,#edf3fb_0%,#e5ebf4_52%,#dde6f1_100%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_14%,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0)_34%),radial-gradient(circle_at_80%_18%,rgba(217,226,246,0.32)_0%,rgba(217,226,246,0)_36%)]"
         aria-hidden="true"
       />
       <section className="relative z-10 mx-auto grid h-auto min-h-[690px] w-full max-w-[1560px] overflow-hidden rounded-[30px] bg-white shadow-[0_30px_96px_rgba(38,48,73,0.18)] xl:h-[min(842px,calc(100dvh-76px))] xl:grid-cols-[minmax(420px,0.405fr)_minmax(0,0.595fr)]">
-        <aside className="relative flex min-h-[690px] items-center justify-center overflow-hidden bg-[#f8fbff] px-8 py-12 sm:px-12 lg:px-16 xl:min-h-0 xl:px-[88px]">
-          <Image
-            src="/landing-assets/login-page-background.png"
-            alt=""
-            fill
-            priority
-            unoptimized
-            sizes="(min-width: 1280px) 640px, 100vw"
-            className="pointer-events-none select-none object-cover object-left"
-            aria-hidden="true"
-          />
+        <aside
+          className="relative flex min-h-[690px] items-center justify-center overflow-hidden bg-[#f8fbff] bg-cover bg-center px-8 py-12 sm:px-12 lg:px-16 xl:min-h-0 xl:px-[88px]"
+          style={{ backgroundImage: "url('/landing-assets/login-page-background.png')" }}
+        >
           <div
-            className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.04)_48%,rgba(234,221,255,0.18)_100%)]"
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.03)_0%,rgba(255,255,255,0)_48%,rgba(218,197,255,0.06)_100%)]"
             aria-hidden="true"
           />
           <section className="relative z-10 w-full max-w-[420px]">
