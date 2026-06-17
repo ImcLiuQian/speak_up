@@ -15,7 +15,7 @@ interface AppAuthGateProps {
   children: ReactNode;
 }
 
-const PUBLIC_ROUTES = new Set(["/login", "/survey", "/privacy", "/terms", "/community", "/accessibility"]);
+const PUBLIC_ROUTES = new Set(["/login", "/privacy", "/terms", "/community", "/accessibility"]);
 
 export function AppAuthGate({ children }: AppAuthGateProps) {
   const pathname = usePathname();

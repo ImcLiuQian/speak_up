@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+const SURVEY_URL = "https://x1h3t1kti6o.feishu.cn/share/base/form/shrcnRuZl6UMP7oijTUoxKQVvLe";
+
 const footerLinks = [
-  { label: "问卷调查", href: "/survey", external: false },
+  { label: "问卷调查", href: SURVEY_URL, external: true },
   { label: "隐私政策", href: "/privacy", external: false },
   { label: "服务条款", href: "/terms", external: false },
   { label: "微信", href: "/community", external: false },

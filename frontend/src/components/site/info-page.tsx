@@ -11,7 +11,7 @@ interface InfoPageProps {
   eyebrow: string;
   title: string;
   summary?: string;
-  sections: InfoSection[];
+  sections?: InfoSection[];
   visual?: {
     src: string;
     alt: string;
@@ -24,7 +24,7 @@ interface InfoPageProps {
   };
 }
 
-export function InfoPage({ eyebrow, title, summary, sections, visual, action }: InfoPageProps) {
+export function InfoPage({ eyebrow, title, summary, sections = [], visual, action }: InfoPageProps) {
   return (
     <main className="min-h-[100dvh] bg-[#e8edf4] px-4 py-6 text-slate-950 md:px-8 md:py-10">
       <section className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-3xl flex-col rounded-[26px] bg-white/88 px-6 py-8 shadow-[0_30px_100px_rgba(15,23,42,0.12)] backdrop-blur md:px-10 md:py-10">
@@ -49,14 +49,16 @@ export function InfoPage({ eyebrow, title, summary, sections, visual, action }: 
           </div>
         ) : null}
 
-        <div className="mt-9 grid gap-6">
-          {sections.map((section) => (
-            <section key={section.title} className="border-t border-slate-200 pt-6">
-              <h2 className="text-lg font-semibold text-slate-950">{section.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{section.body}</p>
-            </section>
-          ))}
-        </div>
+        {sections.length > 0 ? (
+          <div className="mt-9 grid gap-6">
+            {sections.map((section) => (
+              <section key={section.title} className="border-t border-slate-200 pt-6">
+                <h2 className="text-lg font-semibold text-slate-950">{section.title}</h2>
+                <p className="mt-3 text-sm leading-7 text-slate-600">{section.body}</p>
+              </section>
+            ))}
+          </div>
+        ) : null}
 
         {action ? (
           <a

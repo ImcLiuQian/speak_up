@@ -92,7 +92,7 @@ uvicorn app.main:app --reload
 
 前端本地开发会尝试连接 `http://127.0.0.1:8000` 和 `http://localhost:8000`；公网部署时默认走同域名反代的 `/api` 和 `/ws`。如需改后端地址，设置 `NEXT_PUBLIC_API_BASE_URL`。内测账号登录后的 session token hash、套餐和额度数据默认写入 SQLite。
 
-底部导航中的问卷入口默认展示站内反馈说明；如果已经有正式问卷平台链接，设置 `SPEAK_UP_SURVEY_URL` 后，`/survey` 会直接跳转到该链接。微信入口可通过 `SPEAK_UP_WECHAT_QR_URL` 配置成外部二维码图片链接；本地静态构建也兼容对应的 `NEXT_PUBLIC_*` 变量。
+底部导航中的问卷入口直接打开正式飞书问卷；历史 `/survey` 链接也会重定向到同一个问卷地址。微信入口可通过 `SPEAK_UP_WECHAT_QR_URL` 配置成外部二维码图片链接；本地静态构建也兼容对应的 `NEXT_PUBLIC_WECHAT_QR_URL` 变量。
 
 本地账号和回放存储配置：
 

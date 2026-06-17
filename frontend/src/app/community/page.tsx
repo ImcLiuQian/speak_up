@@ -18,14 +18,6 @@ export default function CommunityPage() {
             }
           : undefined
       }
-      sections={[
-        {
-          title: wechatQrUrl ? "添加方式" : "申请方式",
-          body: wechatQrUrl
-            ? "扫描上方二维码即可添加个人微信。如果页面截图不方便识别，也可以点击下方按钮打开二维码原图。"
-            : "微信二维码暂未配置。配置完成后，这里会展示可扫码添加的个人微信。",
-        },
-      ]}
       action={
         wechatQrUrl
           ? {

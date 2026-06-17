@@ -92,7 +92,7 @@ uvicorn app.main:app --reload
 
 During local development, the frontend tries to connect to `http://127.0.0.1:8000` and `http://localhost:8000`. In public deployments, it uses same-origin reverse-proxied `/api` and `/ws` paths by default. Set `NEXT_PUBLIC_API_BASE_URL` if you need a custom backend URL. Login session token hashes, plan state, and quota data are stored in SQLite by default.
 
-The footer survey entry shows the built-in feedback page by default. When a formal questionnaire platform URL is ready, set `SPEAK_UP_SURVEY_URL` and `/survey` will redirect to it. The WeChat entry can open an external QR code image through `SPEAK_UP_WECHAT_QR_URL`; local static builds also keep the matching `NEXT_PUBLIC_*` variables as fallbacks.
+The footer survey entry opens the formal Feishu questionnaire directly; historical `/survey` links redirect to the same questionnaire. The WeChat entry can open an external QR code image through `SPEAK_UP_WECHAT_QR_URL`; local static builds also keep `NEXT_PUBLIC_WECHAT_QR_URL` as a fallback.
 
 Local account and replay storage configuration:
 
