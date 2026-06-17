@@ -20,6 +20,8 @@ class StoredObject:
 
 
 class ObjectStorageService:
+    _UPLOAD_TIMEOUT_SECONDS = 300.0
+
     def __init__(self) -> None:
         self.driver = os.getenv("SPEAK_UP_STORAGE_DRIVER", "local").strip().lower() or "local"
         self.bucket = os.getenv("SPEAK_UP_OSS_BUCKET", "").strip()
@@ -133,9 +135,16 @@ class ObjectStorageService:
             "Content-Type": normalized_content_type,
             "Date": date_header,
         }
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=self._upload_timeout()) as client:
             response = await client.put(url, content=data, headers=headers)
             response.raise_for_status()
+
+    def _upload_timeout(self) -> httpx.Timeout:
+        return httpx.Timeout(
+            self._UPLOAD_TIMEOUT_SECONDS,
+            connect=15.0,
+            pool=15.0,
+        )
 
 
 object_storage_service = ObjectStorageService()

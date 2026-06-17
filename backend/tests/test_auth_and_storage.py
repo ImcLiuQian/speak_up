@@ -166,6 +166,13 @@ class ObjectStorageServiceTest(unittest.TestCase):
         self.assertIn("OSSAccessKeyId=ak", signed_url)
         self.assertIn("Signature=", signed_url)
 
+    def test_oss_upload_uses_long_write_timeout_for_replay_video(self) -> None:
+        storage = ObjectStorageService()
+        timeout = storage._upload_timeout()
+
+        self.assertEqual(timeout.connect, 15.0)
+        self.assertEqual(timeout.write, 300.0)
+
 
 if __name__ == "__main__":
     unittest.main()

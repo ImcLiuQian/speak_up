@@ -4,14 +4,14 @@ export const dynamic = "force-dynamic";
 
 export default function CommunityPage() {
   const wechatQrUrl = process.env.SPEAK_UP_WECHAT_QR_URL?.trim() || process.env.NEXT_PUBLIC_WECHAT_QR_URL?.trim();
-  const requestSubject = encodeURIComponent("申请加入 Speak Up 微信社群");
+  const requestSubject = encodeURIComponent("申请添加 Speak Up 微信");
   const requestBody = encodeURIComponent(
     [
-      "我想加入 Speak Up 微信社群。",
+      "我想添加 Speak Up 微信。",
       "",
       "我常练习的表达场景：",
       "",
-      "希望在社区里获得的帮助：",
+      "希望获得的帮助：",
       "",
     ].join("\n"),
   );
@@ -19,27 +19,27 @@ export default function CommunityPage() {
   return (
     <InfoPage
       eyebrow="Speak Up"
-      title="微信社群"
-      summary="社群用于交换练习题、复盘方法和真实演讲场景。二维码配置后，这里会直接展示微信入群入口。"
+      title="微信联系"
+      summary="这里展示的是维护者的个人微信二维码，用于内测反馈、问题定位和使用交流。"
       visual={
         wechatQrUrl
           ? {
               src: wechatQrUrl,
               alt: "Speak Up 微信二维码",
-              caption: "打开微信扫一扫，添加后备注 Speak Up 内测。",
+              caption: "打开微信扫一扫，添加好友时请备注 Speak Up 内测。",
             }
           : undefined
       }
       sections={[
         {
-          title: "社区计划",
-          body: "我们希望把社区做成轻量的表达训练场：分享练习题、复盘模板、开场案例和问答挑战，让每个人都能从别人的表达里获得启发。",
+          title: "联系说明",
+          body: "这个入口主要用于内测阶段的沟通：反馈训练问题、同步复现步骤、交流真实表达场景，以及后续邀请访谈。",
         },
         {
-          title: wechatQrUrl ? "加入方式" : "申请方式",
+          title: wechatQrUrl ? "添加方式" : "申请方式",
           body: wechatQrUrl
-            ? "扫描上方二维码即可申请加入。如果页面截图不方便识别，也可以点击下方按钮打开二维码原图。"
-            : "微信二维码暂未配置。你可以先发送邮件申请邀请，维护者会手动回复可用入口。",
+            ? "扫描上方二维码即可添加个人微信。如果页面截图不方便识别，也可以点击下方按钮打开二维码原图。"
+            : "微信二维码暂未配置。你可以先发送邮件说明你的使用场景，维护者会手动回复。",
         },
       ]}
       action={{

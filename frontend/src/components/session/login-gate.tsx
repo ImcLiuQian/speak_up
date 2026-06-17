@@ -84,8 +84,8 @@ export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) 
       className="relative flex min-h-[100dvh] items-start justify-center overflow-hidden bg-[#e9edf4] px-3 pb-20 pt-8 text-slate-950 sm:px-5 lg:px-6 min-[1500px]:pt-[54px]"
       style={{
         backgroundImage:
-          "linear-gradient(135deg, rgba(237, 243, 251, 0.78), rgba(222, 232, 245, 0.86)), url('/landing-assets/login-page-background.png')",
-        backgroundPosition: "center bottom",
+          "linear-gradient(135deg, rgba(245, 248, 253, 0.64), rgba(225, 233, 246, 0.58)), url('/landing-assets/page-shell-background.png')",
+        backgroundPosition: "center",
         backgroundSize: "cover",
       }}
     >
