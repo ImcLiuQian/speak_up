@@ -94,12 +94,19 @@ export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) 
         aria-hidden="true"
       />
       <section className="relative z-10 mx-auto grid h-auto min-h-[690px] w-full max-w-[1560px] overflow-hidden rounded-[30px] bg-white shadow-[0_30px_96px_rgba(38,48,73,0.18)] xl:h-[min(842px,calc(100dvh-76px))] xl:grid-cols-[minmax(420px,0.405fr)_minmax(0,0.595fr)]">
-        <aside
-          className="relative flex min-h-[690px] items-center justify-center overflow-hidden bg-[#f8fbff] bg-cover bg-center px-8 py-12 sm:px-12 lg:px-16 xl:min-h-0 xl:px-[88px]"
-          style={{ backgroundImage: "url('/landing-assets/login-page-background.png')" }}
-        >
+        <aside className="relative flex min-h-[690px] items-center justify-center overflow-hidden bg-[#f8fbff] px-8 py-12 sm:px-12 lg:px-16 xl:min-h-0 xl:px-[88px]">
+          <Image
+            src="/landing-assets/login-page-background.png"
+            alt=""
+            fill
+            priority
+            unoptimized
+            sizes="(min-width: 1280px) 640px, 100vw"
+            className="pointer-events-none select-none object-cover object-center opacity-100 saturate-[1.45] contrast-[1.08]"
+            aria-hidden="true"
+          />
           <div
-            className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.03)_0%,rgba(255,255,255,0)_48%,rgba(218,197,255,0.06)_100%)]"
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0)_46%,rgba(222,206,255,0.26)_100%)]"
             aria-hidden="true"
           />
           <section className="relative z-10 w-full max-w-[420px]">

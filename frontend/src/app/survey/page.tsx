@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 export default function SurveyPage() {
-  const surveyUrl = process.env.NEXT_PUBLIC_SURVEY_URL?.trim();
+  const surveyUrl = process.env.SPEAK_UP_SURVEY_URL?.trim() || process.env.NEXT_PUBLIC_SURVEY_URL?.trim();
   if (surveyUrl) {
     redirect(surveyUrl);
   }

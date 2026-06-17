@@ -4,7 +4,7 @@ const footerLinks = [
   { label: "问卷调查", href: "/survey", external: false },
   { label: "隐私政策", href: "/privacy", external: false },
   { label: "服务条款", href: "/terms", external: false },
-  { label: "Discord", href: "/community", external: false },
+  { label: "微信", href: "/community", external: false },
   { label: "GitHub", href: "https://github.com/ImcLiuQian/speak_up", external: true },
   { label: "无障碍", href: "/accessibility", external: false },
 ] as const;
