@@ -160,8 +160,8 @@ export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) 
                 <CoachCard key={coach.name} coach={coach} />
               ))}
               <SpeechBubble className="right-[2px] top-[128px]" tailClassName="-left-[9px] bottom-[18px] rotate-45" icon={<SmallBarsIcon />} text={["语速更稳了", "表达更清晰!"]} />
-              <SpeechBubble className="right-[8px] top-[328px]" tailClassName="-left-[9px] top-[18px] rotate-45" icon={<HeartIcon />} text={["情绪饱满", "打动人心!"]} />
-              <SpeechBubble className="left-[126px] top-[498px]" tailClassName="right-[-9px] top-[28px] rotate-45" icon={<ReportIcon />} text={["结构清晰", "逻辑升级!"]} />
+              <SpeechBubble className="right-[0px] top-[454px]" tailClassName="-left-[9px] top-[18px] rotate-45" icon={<HeartIcon />} text={["情绪饱满", "打动人心!"]} />
+              <SpeechBubble className="left-[134px] top-[454px]" tailClassName="right-[-9px] top-[28px] rotate-45" icon={<ReportIcon />} text={["结构清晰", "逻辑升级!"]} />
             </div>
 
             <div className="absolute inset-x-[54px] bottom-[82px] grid grid-cols-3 divide-x divide-white/14">
