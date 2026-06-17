@@ -93,6 +93,16 @@ export function LoginGate({ loading = false, onSessionChange }: LoginGateProps) 
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_14%,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0)_34%),radial-gradient(circle_at_80%_18%,rgba(217,226,246,0.32)_0%,rgba(217,226,246,0)_36%)]"
         aria-hidden="true"
       />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[220px] opacity-90 saturate-[1.18]"
+        style={{
+          backgroundImage:
+            "linear-gradient(180deg, rgba(232, 237, 244, 0) 0%, rgba(232, 237, 244, 0.10) 34%, rgba(232, 237, 244, 0) 100%), url('/landing-assets/page-shell-background.png')",
+          backgroundPosition: "center bottom",
+          backgroundSize: "cover",
+        }}
+        aria-hidden="true"
+      />
       <section className="relative z-10 mx-auto grid h-auto min-h-[690px] w-full max-w-[1560px] overflow-hidden rounded-[30px] bg-white shadow-[0_30px_96px_rgba(38,48,73,0.18)] xl:h-[min(842px,calc(100dvh-76px))] xl:grid-cols-[minmax(420px,0.405fr)_minmax(0,0.595fr)]">
         <aside className="relative flex min-h-[690px] items-center justify-center overflow-hidden bg-[#f8fbff] px-8 py-12 sm:px-12 lg:px-16 xl:min-h-0 xl:px-[88px]">
           <Image

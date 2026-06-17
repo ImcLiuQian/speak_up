@@ -10,7 +10,7 @@ interface InfoSection {
 interface InfoPageProps {
   eyebrow: string;
   title: string;
-  summary: string;
+  summary?: string;
   sections: InfoSection[];
   visual?: {
     src: string;
@@ -33,7 +33,7 @@ export function InfoPage({ eyebrow, title, summary, sections, visual, action }: 
         </Link>
         <p className="mt-10 text-sm font-semibold text-violet-700">{eyebrow}</p>
         <h1 className="mt-3 text-4xl font-semibold tracking-[0] text-[#071023] md:text-5xl">{title}</h1>
-        <p className="mt-5 text-base font-medium leading-8 text-slate-600">{summary}</p>
+        {summary ? <p className="mt-5 text-base font-medium leading-8 text-slate-600">{summary}</p> : null}
 
         {visual ? (
           <div className="mt-8 w-full rounded-[24px] border border-slate-200 bg-slate-50/80 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
