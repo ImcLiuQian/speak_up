@@ -44,10 +44,10 @@ SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"account-id","password":"password","disp
 
 `SPEAK_UP_INTERNAL_ACCOUNTS` 必须在运行环境里配置；为空时登录接口会返回“内测账号池未配置”，避免把真实账号口令长期写进仓库。
 
-回放媒体默认保存在本地报告目录。接阿里云 OSS 时设置：
+回放媒体默认保存在本地报告目录。接阿里云 OSS 时打开开关并配置 bucket：
 
 ```bash
-SPEAK_UP_STORAGE_DRIVER=oss
+SPEAK_UP_OSS_ENABLED=true
 SPEAK_UP_OSS_BUCKET=...
 SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
 SPEAK_UP_OSS_ACCESS_KEY_ID=...
@@ -56,13 +56,13 @@ SPEAK_UP_OSS_PUBLIC_BASE_URL=https://cdn.example.com
 SPEAK_UP_OSS_PREFIX=speak-up
 ```
 
-`SPEAK_UP_OSS_PUBLIC_BASE_URL` 可为空；为空时回放接口会生成短期签名 URL，适合私有 bucket。本地开发时把 `SPEAK_UP_STORAGE_DRIVER` 保持为 `local` 即可。
+`SPEAK_UP_OSS_ENABLED` 默认是 `false`，即使用本地磁盘。设置为 `true` 后，回放视频上传到 OSS，本地只保留 `replay_media.json` 元数据。`SPEAK_UP_OSS_PUBLIC_BASE_URL` 可为空；为空时回放接口会生成短期签名 URL，适合私有 bucket。旧变量 `SPEAK_UP_STORAGE_DRIVER=oss` 仍兼容，但新部署优先使用 `SPEAK_UP_OSS_ENABLED`。
 
 如果生产环境已经存在本地回放媒体，配置好 OSS 后可以迁移：
 
 ```bash
 cd /srv/speak_up/backend
-SPEAK_UP_STORAGE_DRIVER=oss \
+SPEAK_UP_OSS_ENABLED=true \
 SPEAK_UP_OSS_BUCKET=... \
 SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com \
 SPEAK_UP_OSS_ACCESS_KEY_ID=... \

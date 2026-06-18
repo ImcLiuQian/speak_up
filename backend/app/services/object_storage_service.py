@@ -23,7 +23,7 @@ class ObjectStorageService:
     _UPLOAD_TIMEOUT_SECONDS = 300.0
 
     def __init__(self) -> None:
-        self.driver = os.getenv("SPEAK_UP_STORAGE_DRIVER", "local").strip().lower() or "local"
+        self.oss_enabled = self._resolve_oss_enabled()
         self.bucket = os.getenv("SPEAK_UP_OSS_BUCKET", "").strip()
         self.endpoint = (
             os.getenv("SPEAK_UP_OSS_ENDPOINT", "")
@@ -39,7 +39,7 @@ class ObjectStorageService:
 
     @property
     def enabled(self) -> bool:
-        return self.driver == "oss"
+        return self.oss_enabled
 
     async def save_replay_media(
         self,
@@ -145,6 +145,13 @@ class ObjectStorageService:
             connect=15.0,
             pool=15.0,
         )
+
+    @staticmethod
+    def _resolve_oss_enabled() -> bool:
+        explicit_enabled = os.getenv("SPEAK_UP_OSS_ENABLED")
+        if explicit_enabled is not None:
+            return explicit_enabled.strip().lower() in {"1", "true", "yes", "on"}
+        return os.getenv("SPEAK_UP_STORAGE_DRIVER", "local").strip().lower() == "oss"
 
 
 object_storage_service = ObjectStorageService()

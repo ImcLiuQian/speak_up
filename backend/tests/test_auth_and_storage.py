@@ -142,11 +142,30 @@ class AuthServiceTest(unittest.IsolatedAsyncioTestCase):
 
 
 class ObjectStorageServiceTest(unittest.TestCase):
+    def test_replay_storage_defaults_to_local(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            storage = ObjectStorageService()
+
+        self.assertFalse(storage.enabled)
+
+    def test_explicit_oss_switch_overrides_legacy_storage_driver(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "SPEAK_UP_OSS_ENABLED": "false",
+                "SPEAK_UP_STORAGE_DRIVER": "oss",
+            },
+            clear=False,
+        ):
+            storage = ObjectStorageService()
+
+        self.assertFalse(storage.enabled)
+
     def test_builds_signed_read_url_for_private_oss_bucket(self) -> None:
         with patch.dict(
             os.environ,
             {
-                "SPEAK_UP_STORAGE_DRIVER": "oss",
+                "SPEAK_UP_OSS_ENABLED": "true",
                 "SPEAK_UP_OSS_BUCKET": "bucket",
                 "SPEAK_UP_OSS_ENDPOINT": "https://oss-cn-hangzhou.aliyuncs.com/",
                 "SPEAK_UP_OSS_ACCESS_KEY_ID": "ak",
@@ -165,6 +184,18 @@ class ObjectStorageServiceTest(unittest.TestCase):
         )
         self.assertIn("OSSAccessKeyId=ak", signed_url)
         self.assertIn("Signature=", signed_url)
+
+    def test_legacy_storage_driver_still_enables_oss(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "SPEAK_UP_STORAGE_DRIVER": "oss",
+            },
+            clear=False,
+        ):
+            storage = ObjectStorageService()
+
+        self.assertTrue(storage.enabled)
 
     def test_oss_upload_uses_long_write_timeout_for_replay_video(self) -> None:
         storage = ObjectStorageService()

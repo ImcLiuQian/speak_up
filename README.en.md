@@ -1,6 +1,6 @@
 # Speak Up
 
-English | [Simplified Chinese](README.md)
+[简体中文](README.md) | English
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -33,7 +33,7 @@ speak_up/
 4. Document speech can use built-in practice text or uploaded PDF/Markdown files. The frontend sends the login token to `POST /api/document/extract` to extract text.
 5. When practice starts, the frontend sends the login token in `Authorization: Bearer <token>` to `POST /api/session/start`. In same-origin deployments, WebSocket authentication uses a secure cookie.
 6. The browser captures microphone PCM audio and camera frames, sends them to the backend continuously, and receives transcripts, Live Coach signals, Q&A events, and audio events.
-7. When practice ends, the frontend tries to upload replay media, calls `POST /api/session/{session_id}/finish` with the login token, the backend accumulates daily training time and releases the active session, then the frontend navigates to `/report`.
+7. When practice ends, the frontend tries to upload replay media, calls `POST /api/session/{session_id}/finish` with the login token, the backend releases the active session, then the frontend navigates to `/report`.
 8. The report page polls `GET /api/session/{session_id}/report` while the backend generates the report.
 9. The replay page calls `GET /api/session/{session_id}/replay` and shows transcripts and coach signals on a synchronized timeline.
 
@@ -90,7 +90,7 @@ Start the backend from `backend/`:
 uvicorn app.main:app --reload
 ```
 
-During local development, the frontend tries to connect to `http://127.0.0.1:8000` and `http://localhost:8000`. In public deployments, it uses same-origin reverse-proxied `/api` and `/ws` paths by default. Set `NEXT_PUBLIC_API_BASE_URL` if you need a custom backend URL. Login session token hashes, plan state, and quota data are stored in SQLite by default.
+During local development, the frontend tries to connect to `http://127.0.0.1:8000` and `http://localhost:8000`. In public deployments, it uses same-origin reverse-proxied `/api` and `/ws` paths by default. Set `NEXT_PUBLIC_API_BASE_URL` if you need a custom backend URL. Login session token hashes and active session state are stored in SQLite by default.
 
 The footer survey entry opens the formal Feishu questionnaire directly; historical `/survey` links redirect to the same questionnaire. The WeChat entry can open an external QR code image through `SPEAK_UP_WECHAT_QR_URL`; local static builds also keep `NEXT_PUBLIC_WECHAT_QR_URL` as a fallback.
 
@@ -99,9 +99,10 @@ Local account and replay storage configuration:
 ```bash
 SPEAK_UP_AUTH_DB_PATH=output/auth_data/auth.sqlite3
 SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"account-id","password":"password","displayName":"Beta User"}]'
-SPEAK_UP_STORAGE_DRIVER=local
+SPEAK_UP_OSS_ENABLED=false
 
-# Alibaba Cloud OSS replay storage. Set SPEAK_UP_STORAGE_DRIVER=oss when enabled.
+# Alibaba Cloud OSS replay storage. Set the switch to true when enabled.
+# SPEAK_UP_OSS_ENABLED=true
 SPEAK_UP_OSS_BUCKET=...
 SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
 SPEAK_UP_OSS_ACCESS_KEY_ID=...
@@ -110,7 +111,7 @@ SPEAK_UP_OSS_PUBLIC_BASE_URL=https://cdn.example.com
 SPEAK_UP_OSS_PREFIX=speak-up
 ```
 
-`SPEAK_UP_OSS_PUBLIC_BASE_URL` can be empty. When it is empty, the backend generates short-lived signed replay URLs, which works well for private buckets.
+`SPEAK_UP_OSS_ENABLED` defaults to `false`, so replay media is written to the ECS local report directory. When it is `true`, replay video is uploaded to Alibaba Cloud OSS and the local report directory only keeps `replay_media.json` metadata. `SPEAK_UP_OSS_PUBLIC_BASE_URL` can be empty. When it is empty, the backend generates short-lived signed replay URLs, which works well for private buckets. The legacy `SPEAK_UP_STORAGE_DRIVER=oss` switch is still supported for compatibility, but new deployments should prefer `SPEAK_UP_OSS_ENABLED`.
 
 ## Public Deployment
 

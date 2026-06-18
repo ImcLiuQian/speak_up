@@ -1,6 +1,6 @@
 # Speak Up
 
-[English](README.en.md) | 简体中文
+简体中文 | [English](README.en.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -33,7 +33,7 @@ speak_up/
 4. 文档演讲可以使用内置练习文本，也可以上传 PDF/Markdown，前端带登录 token 调用 `POST /api/document/extract` 抽取正文。
 5. 开始练习时，前端把登录 token 放在 `Authorization: Bearer <token>` 中调用 `POST /api/session/start`，同域部署下 WebSocket 通过安全 cookie 鉴权。
 6. 浏览器采集麦克风 PCM 音频和摄像头画面，持续发给后端，并接收文字稿、Live Coach、问答和音频事件。
-7. 结束练习时，前端尽量上传回放媒体，带登录 token 调用 `POST /api/session/{session_id}/finish`，后端累计当天训练时长并释放 active session，再跳转到 `/report`。
+7. 结束练习时，前端尽量上传回放媒体，带登录 token 调用 `POST /api/session/{session_id}/finish`，后端释放 active session，再跳转到 `/report`。
 8. 报告页在后端生成报告期间轮询 `GET /api/session/{session_id}/report`。
 9. 回放页调用 `GET /api/session/{session_id}/replay`，按时间轴同步展示文字稿和教练信号。
 
@@ -90,7 +90,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-前端本地开发会尝试连接 `http://127.0.0.1:8000` 和 `http://localhost:8000`；公网部署时默认走同域名反代的 `/api` 和 `/ws`。如需改后端地址，设置 `NEXT_PUBLIC_API_BASE_URL`。内测账号登录后的 session token hash、套餐和额度数据默认写入 SQLite。
+前端本地开发会尝试连接 `http://127.0.0.1:8000` 和 `http://localhost:8000`；公网部署时默认走同域名反代的 `/api` 和 `/ws`。如需改后端地址，设置 `NEXT_PUBLIC_API_BASE_URL`。内测账号登录后的 session token hash 和 active session 状态默认写入 SQLite。
 
 底部导航中的问卷入口直接打开正式飞书问卷；历史 `/survey` 链接也会重定向到同一个问卷地址。微信入口可通过 `SPEAK_UP_WECHAT_QR_URL` 配置成外部二维码图片链接；本地静态构建也兼容对应的 `NEXT_PUBLIC_WECHAT_QR_URL` 变量。
 
@@ -99,9 +99,10 @@ uvicorn app.main:app --reload
 ```bash
 SPEAK_UP_AUTH_DB_PATH=output/auth_data/auth.sqlite3
 SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"account-id","password":"password","displayName":"内测用户"}]'
-SPEAK_UP_STORAGE_DRIVER=local
+SPEAK_UP_OSS_ENABLED=false
 
-# 阿里云 OSS 回放存储，启用时把 SPEAK_UP_STORAGE_DRIVER 改成 oss
+# 阿里云 OSS 回放存储，启用时把开关改成 true
+# SPEAK_UP_OSS_ENABLED=true
 SPEAK_UP_OSS_BUCKET=...
 SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
 SPEAK_UP_OSS_ACCESS_KEY_ID=...
@@ -110,7 +111,7 @@ SPEAK_UP_OSS_PUBLIC_BASE_URL=https://cdn.example.com
 SPEAK_UP_OSS_PREFIX=speak-up
 ```
 
-`SPEAK_UP_OSS_PUBLIC_BASE_URL` 可为空；为空时后端会给回放生成短期签名地址，适合私有 bucket。
+`SPEAK_UP_OSS_ENABLED` 默认是 `false`，回放媒体会写入 ECS 本地报告目录；设置为 `true` 后，回放视频上传到阿里云 OSS，本地只保留 `replay_media.json` 元数据。`SPEAK_UP_OSS_PUBLIC_BASE_URL` 可为空；为空时后端会给回放生成短期签名地址，适合私有 bucket。旧变量 `SPEAK_UP_STORAGE_DRIVER=oss` 仍兼容，但新部署优先使用 `SPEAK_UP_OSS_ENABLED`。
 
 ## 公网部署
 

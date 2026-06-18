@@ -70,7 +70,7 @@ sudo systemctl enable --now speak-up-backend speak-up-frontend
 Put production secrets in `/opt/speak_up/.env`. Do not commit that file.
 Set `SPEAK_UP_ALLOWED_ORIGINS=https://www.speakupcoach.cn` if you override the default CORS list and keep the canonical redirect.
 Keep `SPEAK_UP_WEBSOCKET_TOKEN_IN_QUERY=false` for same-domain deployment so WebSocket auth uses the secure login cookie instead of putting tokens in URLs.
-The simplified internal-beta login uses SQLite for token/session, paid-plan, and quota state:
+The simplified internal-beta login uses SQLite for token/session and active-session state:
 
 ```bash
 SPEAK_UP_AUTH_DATA_DIR=/opt/speak_up/backend/output/auth_data
@@ -84,10 +84,10 @@ SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"account-id","password":"password","disp
 test_user -> 测试用户
 ```
 
-Replay video storage can still use Aliyun OSS. Keep these settings if replay media should survive ECS disk cleanup or be served through a private bucket:
+Replay video storage uses local disk by default. Turn on the OSS switch when replay media should survive ECS disk cleanup or be served through a private bucket:
 
 ```bash
-SPEAK_UP_STORAGE_DRIVER=oss
+SPEAK_UP_OSS_ENABLED=true
 SPEAK_UP_OSS_BUCKET=<bucket>
 SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
 SPEAK_UP_OSS_ACCESS_KEY_ID=<access-key-id>
@@ -95,6 +95,8 @@ SPEAK_UP_OSS_ACCESS_KEY_SECRET=<access-key-secret>
 SPEAK_UP_OSS_PUBLIC_BASE_URL=
 SPEAK_UP_OSS_PREFIX=speak-up
 ```
+
+If `SPEAK_UP_OSS_ENABLED` is unset or `false`, replay media stays under the backend report output directory. The legacy `SPEAK_UP_STORAGE_DRIVER=oss` value is still accepted for compatibility, but new ECS deployments should use `SPEAK_UP_OSS_ENABLED=true`.
 
 ## Nginx and certificate
 
