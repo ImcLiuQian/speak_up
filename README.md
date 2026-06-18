@@ -4,38 +4,25 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Speak Up 是一个演讲训练 Web 原型。当前代码是 Next.js 前端加 FastAPI 后端，支持自由演讲、文档演讲、实时 AI 教练、AI 追问、回放复盘和最终报告生成。
+Speak Up 是一个 AI 演讲训练 Web 原型。它把实时转写、表达反馈、AI 追问、视频回放和训练报告串成一条练习流程，帮助用户把每一次开口都变成可复盘的反馈。
+
+## 功能概览
+
+- 自由演讲和文档演讲两种训练模式。
+- 浏览器采集麦克风和摄像头，后端实时生成文字稿和教练反馈。
+- AI 问答模式会基于训练内容追问、评价回答，并支持语音交互。
+- 训练结束后生成结构化报告，回放页同步展示视频、文字稿和关键反馈。
 
 ## 仓库结构
 
 ```text
 speak_up/
-├── frontend/                  # Next.js 前端项目根
+├── frontend/                  # Next.js 前端
 ├── backend/                   # FastAPI 后端
-├── ai_coach/profiles.json     # 前后端共享的 AI 教练画像源
-├── backend/requirements.txt   # 后端 Python 依赖
-└── .env.example               # 运行环境变量模板
+├── ai_coach/profiles.json     # AI 教练画像
+├── demo_image/                # README 截图
+└── .env.example               # 环境变量示例
 ```
-
-## 技术栈
-
-- 前端：Next.js 16.2.2、React 19、TypeScript、Tailwind CSS 4、Recharts、MediaPipe Tasks Vision。
-- 后端：FastAPI、Pydantic、httpx、websockets、pypdf。
-- 外部 AI：通过环境变量配置阿里云 DashScope realtime 和 OpenAI-compatible 接口。
-- 后端入口：`backend/app/main.py`。
-- 前端入口：`frontend/src/app/page.tsx`，直接渲染 `SessionWorkspace`。
-
-## 主流程
-
-1. 用户打开 `/` 或 `/session`，两者都会进入 `SessionWorkspace`。
-2. 前端从 `ai_coach/profiles.json` 读取教练画像，选择场景，再选择自由演讲或文档演讲模式。
-3. 进入训练台前必须使用内测账号和密码登录；首次登录会在本地账号库自动创建账号记录。
-4. 文档演讲可以使用内置练习文本，也可以上传 PDF/Markdown，前端带登录 token 调用 `POST /api/document/extract` 抽取正文。
-5. 开始练习时，前端把登录 token 放在 `Authorization: Bearer <token>` 中调用 `POST /api/session/start`，同域部署下 WebSocket 通过安全 cookie 鉴权。
-6. 浏览器采集麦克风 PCM 音频和摄像头画面，持续发给后端，并接收文字稿、Live Coach、问答和音频事件。
-7. 结束练习时，前端尽量上传回放媒体，带登录 token 调用 `POST /api/session/{session_id}/finish`，后端释放 active session，再跳转到 `/report`。
-8. 报告页在后端生成报告期间轮询 `GET /api/session/{session_id}/report`。
-9. 回放页调用 `GET /api/session/{session_id}/replay`，按时间轴同步展示文字稿和教练信号。
 
 ## 界面预览
 
@@ -55,100 +42,81 @@ speak_up/
 
 ![训练建议展示](demo_image/suggestion.png)
 
-## Star 趋势
+## AI 链路
 
-[![Star History Chart](https://api.star-history.com/svg?repos=ImcLiuQian/speak_up&type=Date)](https://www.star-history.com/#ImcLiuQian/speak_up&Date)
+```mermaid
+flowchart LR
+    Browser["浏览器\n麦克风 + 摄像头"] --> Backend["FastAPI 后端"]
+    Backend --> ASR["实时转写\nqwen3-asr-flash-realtime"]
+    Backend --> Coach["实时教练\nqwen3.5-omni-flash-realtime"]
+    Backend --> QAOmni["问答语音\nqwen3.5-omni-plus-realtime"]
+    Backend --> QABrain["问答思考\nqwen3.6-plus"]
+    Backend --> Report["训练报告\nqwen-flash"]
+    ASR --> UI["训练台 / 报告 / 回放"]
+    Coach --> UI
+    QAOmni --> UI
+    QABrain --> UI
+    Report --> UI
+```
+
+真实 AI 链路共用 `DASHSCOPE_API_KEY`。下面这些模型名都有默认值，只有想替换模型时才需要额外配置对应变量。
+
+| 功能 | 默认模型 | 用途 | 可选环境变量 |
+| --- | --- | --- | --- |
+| 实时转写 | `qwen3-asr-flash-realtime` | 把麦克风音频转成实时文字稿 | `ALIYUN_REALTIME_ASR_MODEL` |
+| 实时教练 | `qwen3.5-omni-flash-realtime` | 根据音频和画面给出口语、节奏、肢体反馈 | `ALIYUN_OMNI_COACH_MODEL` |
+| 问答语音 | `qwen3.5-omni-plus-realtime` | AI 面试官语音对话和追问 | `ALIYUN_QA_OMNI_MODEL` |
+| 问答思考 | `qwen3.6-plus` | 整理材料、生成问题、评价回答 | `ALIYUN_QA_BRAIN_MODEL` |
+| 问答 TTS | `qwen3-tts-instruct-flash-realtime` | 生成 AI 面试官语音 | `ALIYUN_QA_TTS_MODEL` |
+| 报告窗口 | `qwen-flash` | 分段整理训练过程中的表现 | `ALIYUN_REPORT_WINDOW_MODEL` |
+| 最终报告 | `qwen-flash`，兜底 `qwen-plus-latest` | 汇总整场训练报告和建议 | `ALIYUN_REPORT_BRAIN_MODEL`、`ALIYUN_REPORT_BRAIN_FALLBACK_MODEL` |
 
 ## 本地运行
 
-安装前端依赖：
+后端不会自动读取 `.env` 文件，请把变量放到当前 shell 或你的进程管理器里。最少需要：
 
 ```bash
-cd frontend
-npm install
+export DASHSCOPE_API_KEY=sk-...
+export SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"demo","password":"change-me","displayName":"Demo User"}]'
 ```
 
-启动前端：
+`DASHSCOPE_API_KEY` 用于阿里云 DashScope 模型调用。`SPEAK_UP_INTERNAL_ACCOUNTS` 是本地内测账号池；不要把真实账号密码提交到仓库。
 
-```bash
-cd frontend
-npm run dev
-```
-
-安装后端依赖：
+启动后端：
 
 ```bash
 cd backend
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-```
-
-从 `backend/` 目录启动后端：
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-前端本地开发会尝试连接 `http://127.0.0.1:8000` 和 `http://localhost:8000`；公网部署时默认走同域名反代的 `/api` 和 `/ws`。如需改后端地址，设置 `NEXT_PUBLIC_API_BASE_URL`。内测账号登录后的 session token hash 和 active session 状态默认写入 SQLite。
-
-底部导航中的问卷入口直接打开正式飞书问卷；历史 `/survey` 链接也会重定向到同一个问卷地址。微信入口可通过 `SPEAK_UP_WECHAT_QR_URL` 配置成外部二维码图片链接；本地静态构建也兼容对应的 `NEXT_PUBLIC_WECHAT_QR_URL` 变量。
-
-本地账号和回放存储配置：
+启动前端：
 
 ```bash
-SPEAK_UP_AUTH_DB_PATH=output/auth_data/auth.sqlite3
-SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"account-id","password":"password","displayName":"内测用户"}]'
-SPEAK_UP_OSS_ENABLED=false
-
-# 阿里云 OSS 回放存储，启用时把开关改成 true
-# SPEAK_UP_OSS_ENABLED=true
-SPEAK_UP_OSS_BUCKET=...
-SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
-SPEAK_UP_OSS_ACCESS_KEY_ID=...
-SPEAK_UP_OSS_ACCESS_KEY_SECRET=...
-SPEAK_UP_OSS_PUBLIC_BASE_URL=https://cdn.example.com
-SPEAK_UP_OSS_PREFIX=speak-up
+cd frontend
+npm install
+npm run dev
 ```
 
-`SPEAK_UP_OSS_ENABLED` 默认是 `false`，回放媒体会写入 ECS 本地报告目录；设置为 `true` 后，回放视频上传到阿里云 OSS，本地只保留 `replay_media.json` 元数据。`SPEAK_UP_OSS_PUBLIC_BASE_URL` 可为空；为空时后端会给回放生成短期签名地址，适合私有 bucket。旧变量 `SPEAK_UP_STORAGE_DRIVER=oss` 仍兼容，但新部署优先使用 `SPEAK_UP_OSS_ENABLED`。
-
-## 公网部署
-
-公网域名访问需要 DNS、ECS 安全组、HTTPS 和反向代理同时就绪。仓库提供了可直接参考的配置：
-
-- Nginx：`deploy/nginx/speakupcoach.cn.conf`
-- systemd：`deploy/systemd/speak-up-backend.service`、`deploy/systemd/speak-up-frontend.service`
-- 操作说明：`deploy/README.md`
-
-`speakupcoach.cn` 和 `www.speakupcoach.cn` 需要解析到阿里云 ECS 公网 IP。公网训练页必须使用 HTTPS，否则浏览器不会给摄像头和麦克风权限。
-
-## 环境变量
-
-真实 AI 链路运行前，按 `.env.example` 准备环境变量。后端读取 shell 环境；如果需要让 Next.js 从文件读取前端变量，把 `NEXT_PUBLIC_*` 写到 `frontend/.env.local`。核心必填项是：
-
-```bash
-DASHSCOPE_API_KEY=...
-```
-
-主要配置组：
-
-- ASR：`ALIYUN_REALTIME_ASR_MODEL`、`ALIYUN_REALTIME_ASR_URL`、`ALIYUN_REALTIME_ASR_SILENCE_DURATION_MS`。
-- Live Coach：`ALIYUN_OMNI_COACH_MODEL`、`ALIYUN_OMNI_COACH_URL`、`ALIYUN_OMNI_COACH_SILENCE_DURATION_MS`。
-- 问答：`ALIYUN_QA_OMNI_MODEL`、`ALIYUN_QA_BRAIN_MODEL`、`QA_MAX_QUESTION_TOPICS`、`QA_MAX_FOLLOW_UPS_PER_QUESTION`。
-- 报告：`REPORT_WINDOW_BUILD_INTERVAL_SECONDS`、`ALIYUN_REPORT_WINDOW_MODEL`、`ALIYUN_REPORT_BRAIN_MODEL`。
+打开 `http://localhost:3000/login`，用你在 `SPEAK_UP_INTERNAL_ACCOUNTS` 里配置的账号密码登录。前端默认连接 `http://127.0.0.1:8000`；如果后端地址不同，再配置 `NEXT_PUBLIC_API_BASE_URL`。
 
 ## 质量检查
 
-仓库提供前端 lint 命令：
+前端 lint：
 
 ```bash
 cd frontend
 npm run lint
 ```
 
-后端常规验证方式是启动 FastAPI 后检查 `/health`、`/api/session/start` 和 WebSocket 会话链路。
+后端可以先启动 FastAPI，再检查 `/health`、登录、训练开始和 WebSocket 会话链路。
 
-## 许可证
+## License
 
-本项目使用 [MIT License](LICENSE)。
+This project is licensed under the [MIT License](LICENSE).
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ImcLiuQian/speak_up&type=Date)](https://www.star-history.com/#ImcLiuQian/speak_up&Date)

@@ -4,38 +4,25 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Speak Up is a web prototype for speech training. The current codebase uses a Next.js frontend and a FastAPI backend, with support for free speech practice, document-based speaking, a realtime AI coach, AI follow-up questions, replay review, and final report generation.
+Speak Up is an AI speech-training web prototype. It connects realtime transcription, delivery feedback, AI follow-up questions, replay review, and final reports into one practice loop, so each session becomes feedback that users can review and improve from.
+
+## Features
+
+- Free speech and document-based speech training modes.
+- Browser microphone and camera capture, with realtime transcripts and coach feedback from the backend.
+- AI Q&A mode asks follow-up questions, evaluates answers, and supports voice interaction.
+- After each practice session, Speak Up generates a structured report and a replay page with synchronized video, transcript, and feedback markers.
 
 ## Repository Structure
 
 ```text
 speak_up/
-├── frontend/                  # Next.js frontend root
+├── frontend/                  # Next.js frontend
 ├── backend/                   # FastAPI backend
-├── ai_coach/profiles.json     # Shared AI coach profile source for frontend and backend
-├── backend/requirements.txt   # Backend Python dependencies
-└── .env.example               # Runtime environment variable template
+├── ai_coach/profiles.json     # AI coach profiles
+├── demo_image/                # README screenshots
+└── .env.example               # Example environment variables
 ```
-
-## Tech Stack
-
-- Frontend: Next.js 16.2.2, React 19, TypeScript, Tailwind CSS 4, Recharts, MediaPipe Tasks Vision.
-- Backend: FastAPI, Pydantic, httpx, websockets, pypdf.
-- External AI: Alibaba Cloud DashScope realtime and OpenAI-compatible APIs configured through environment variables.
-- Backend entrypoint: `backend/app/main.py`.
-- Frontend entrypoint: `frontend/src/app/page.tsx`, which renders `SessionWorkspace` directly.
-
-## Main Flow
-
-1. Users open `/` or `/session`; both routes enter `SessionWorkspace`.
-2. The frontend reads coach profiles from `ai_coach/profiles.json`, then users choose a scenario and either free speech or document speech mode.
-3. Before entering the training workspace, users sign in with an internal beta account and password. The first successful sign-in creates a local account record automatically.
-4. Document speech can use built-in practice text or uploaded PDF/Markdown files. The frontend sends the login token to `POST /api/document/extract` to extract text.
-5. When practice starts, the frontend sends the login token in `Authorization: Bearer <token>` to `POST /api/session/start`. In same-origin deployments, WebSocket authentication uses a secure cookie.
-6. The browser captures microphone PCM audio and camera frames, sends them to the backend continuously, and receives transcripts, Live Coach signals, Q&A events, and audio events.
-7. When practice ends, the frontend tries to upload replay media, calls `POST /api/session/{session_id}/finish` with the login token, the backend releases the active session, then the frontend navigates to `/report`.
-8. The report page polls `GET /api/session/{session_id}/report` while the backend generates the report.
-9. The replay page calls `GET /api/session/{session_id}/replay` and shows transcripts and coach signals on a synchronized timeline.
 
 ## UI Preview
 
@@ -55,100 +42,81 @@ speak_up/
 
 ![Training suggestions](demo_image/suggestion.png)
 
-## Star History
+## AI Pipeline
 
-[![Star History Chart](https://api.star-history.com/svg?repos=ImcLiuQian/speak_up&type=Date)](https://www.star-history.com/#ImcLiuQian/speak_up&Date)
+```mermaid
+flowchart LR
+    Browser["Browser\nMicrophone + Camera"] --> Backend["FastAPI Backend"]
+    Backend --> ASR["Realtime ASR\nqwen3-asr-flash-realtime"]
+    Backend --> Coach["Live Coach\nqwen3.5-omni-flash-realtime"]
+    Backend --> QAOmni["Voice Q&A\nqwen3.5-omni-plus-realtime"]
+    Backend --> QABrain["Q&A Brain\nqwen3.6-plus"]
+    Backend --> Report["Training Report\nqwen-flash"]
+    ASR --> UI["Workspace / Report / Replay"]
+    Coach --> UI
+    QAOmni --> UI
+    QABrain --> UI
+    Report --> UI
+```
+
+The real AI path shares one `DASHSCOPE_API_KEY`. The model names below already have defaults; only set the optional variables if you want to override a model.
+
+| Capability | Default model | What it does | Optional env var |
+| --- | --- | --- | --- |
+| Realtime ASR | `qwen3-asr-flash-realtime` | Converts microphone audio into live transcripts | `ALIYUN_REALTIME_ASR_MODEL` |
+| Live Coach | `qwen3.5-omni-flash-realtime` | Produces speech, pacing, and body-language feedback from audio and camera frames | `ALIYUN_OMNI_COACH_MODEL` |
+| Voice Q&A | `qwen3.5-omni-plus-realtime` | Runs the voice interviewer and follow-up dialogue | `ALIYUN_QA_OMNI_MODEL` |
+| Q&A Brain | `qwen3.6-plus` | Summarizes source material, generates questions, and evaluates answers | `ALIYUN_QA_BRAIN_MODEL` |
+| Q&A TTS | `qwen3-tts-instruct-flash-realtime` | Generates the AI interviewer voice | `ALIYUN_QA_TTS_MODEL` |
+| Report Windows | `qwen-flash` | Summarizes performance over short report windows | `ALIYUN_REPORT_WINDOW_MODEL` |
+| Final Report | `qwen-flash`, fallback `qwen-plus-latest` | Builds the final session report and suggestions | `ALIYUN_REPORT_BRAIN_MODEL`, `ALIYUN_REPORT_BRAIN_FALLBACK_MODEL` |
 
 ## Local Development
 
-Install frontend dependencies:
+The backend does not load a `.env` file automatically. Put variables in your current shell or process manager. The minimum setup is:
 
 ```bash
-cd frontend
-npm install
+export DASHSCOPE_API_KEY=sk-...
+export SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"demo","password":"change-me","displayName":"Demo User"}]'
 ```
 
-Start the frontend:
+`DASHSCOPE_API_KEY` is used for Alibaba Cloud DashScope model calls. `SPEAK_UP_INTERNAL_ACCOUNTS` is the local internal account pool; do not commit real account credentials.
 
-```bash
-cd frontend
-npm run dev
-```
-
-Install backend dependencies:
+Start the backend:
 
 ```bash
 cd backend
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-```
-
-Start the backend from `backend/`:
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-During local development, the frontend tries to connect to `http://127.0.0.1:8000` and `http://localhost:8000`. In public deployments, it uses same-origin reverse-proxied `/api` and `/ws` paths by default. Set `NEXT_PUBLIC_API_BASE_URL` if you need a custom backend URL. Login session token hashes and active session state are stored in SQLite by default.
-
-The footer survey entry opens the formal Feishu questionnaire directly; historical `/survey` links redirect to the same questionnaire. The WeChat entry can open an external QR code image through `SPEAK_UP_WECHAT_QR_URL`; local static builds also keep `NEXT_PUBLIC_WECHAT_QR_URL` as a fallback.
-
-Local account and replay storage configuration:
+Start the frontend:
 
 ```bash
-SPEAK_UP_AUTH_DB_PATH=output/auth_data/auth.sqlite3
-SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"account-id","password":"password","displayName":"Beta User"}]'
-SPEAK_UP_OSS_ENABLED=false
-
-# Alibaba Cloud OSS replay storage. Set the switch to true when enabled.
-# SPEAK_UP_OSS_ENABLED=true
-SPEAK_UP_OSS_BUCKET=...
-SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
-SPEAK_UP_OSS_ACCESS_KEY_ID=...
-SPEAK_UP_OSS_ACCESS_KEY_SECRET=...
-SPEAK_UP_OSS_PUBLIC_BASE_URL=https://cdn.example.com
-SPEAK_UP_OSS_PREFIX=speak-up
+cd frontend
+npm install
+npm run dev
 ```
 
-`SPEAK_UP_OSS_ENABLED` defaults to `false`, so replay media is written to the ECS local report directory. When it is `true`, replay video is uploaded to Alibaba Cloud OSS and the local report directory only keeps `replay_media.json` metadata. `SPEAK_UP_OSS_PUBLIC_BASE_URL` can be empty. When it is empty, the backend generates short-lived signed replay URLs, which works well for private buckets. The legacy `SPEAK_UP_STORAGE_DRIVER=oss` switch is still supported for compatibility, but new deployments should prefer `SPEAK_UP_OSS_ENABLED`.
-
-## Public Deployment
-
-Public domain access requires DNS, ECS security groups, HTTPS, and reverse proxy configuration. The repository includes reference configuration:
-
-- Nginx: `deploy/nginx/speakupcoach.cn.conf`
-- systemd: `deploy/systemd/speak-up-backend.service`, `deploy/systemd/speak-up-frontend.service`
-- Guide: `deploy/README.md`
-
-`speakupcoach.cn` and `www.speakupcoach.cn` must resolve to the Alibaba Cloud ECS public IP. Public training pages must use HTTPS; otherwise browsers will not grant camera and microphone permissions.
-
-## Environment Variables
-
-Before running the real AI path, prepare environment variables from `.env.example`. The backend reads from the shell environment. If Next.js should read frontend variables from a file, put `NEXT_PUBLIC_*` values in `frontend/.env.local`. The core required variable is:
-
-```bash
-DASHSCOPE_API_KEY=...
-```
-
-Main configuration groups:
-
-- ASR: `ALIYUN_REALTIME_ASR_MODEL`, `ALIYUN_REALTIME_ASR_URL`, `ALIYUN_REALTIME_ASR_SILENCE_DURATION_MS`.
-- Live Coach: `ALIYUN_OMNI_COACH_MODEL`, `ALIYUN_OMNI_COACH_URL`, `ALIYUN_OMNI_COACH_SILENCE_DURATION_MS`.
-- Q&A: `ALIYUN_QA_OMNI_MODEL`, `ALIYUN_QA_BRAIN_MODEL`, `QA_MAX_QUESTION_TOPICS`, `QA_MAX_FOLLOW_UPS_PER_QUESTION`.
-- Report: `REPORT_WINDOW_BUILD_INTERVAL_SECONDS`, `ALIYUN_REPORT_WINDOW_MODEL`, `ALIYUN_REPORT_BRAIN_MODEL`.
+Open `http://localhost:3000/login` and sign in with the account configured in `SPEAK_UP_INTERNAL_ACCOUNTS`. The frontend connects to `http://127.0.0.1:8000` by default. If your backend runs elsewhere, set `NEXT_PUBLIC_API_BASE_URL`.
 
 ## Quality Checks
 
-The repository provides a frontend lint command:
+Frontend lint:
 
 ```bash
 cd frontend
 npm run lint
 ```
 
-The usual backend validation path is to start FastAPI and check `/health`, `/api/session/start`, and the WebSocket session flow.
+For backend validation, start FastAPI and check `/health`, login, session start, and the WebSocket session flow.
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ImcLiuQian/speak_up&type=Date)](https://www.star-history.com/#ImcLiuQian/speak_up&Date)
