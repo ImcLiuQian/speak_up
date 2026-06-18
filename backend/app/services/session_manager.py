@@ -31,6 +31,7 @@ from app.schemas import (
     TranscriptPartialEvent,
     QAStateEvent,
 )
+from app.services.auth_service import auth_service
 from app.services.coach_panel_service import CoachPanelService
 from app.services.omni_service import (
     AliyunOmniCoachService,
@@ -56,10 +57,12 @@ class SessionRecord:
     scenario_id: ScenarioType
     language: LanguageOption
     coach_profile_id: str | None = None
+    user_email: str | None = None
     status: SessionStatus = "created"
     transcript_count: int = 0
     audio_chunk_count: int = 0
     video_frame_count: int = 0
+    finished_duration_ms: int = 0
     started_at_monotonic: float | None = None
     omni_coach_disabled_reason: str | None = None
     omni_body_disabled_reason: str | None = None
@@ -242,23 +245,27 @@ class SessionManager:
         scenario_id: ScenarioType,
         language: LanguageOption,
         coach_profile_id: str | None,
+        *,
+        user_email: str | None = None,
+        session_id: str | None = None,
     ) -> SessionRecord:
-        session_id = uuid4().hex
+        resolved_session_id = session_id or uuid4().hex
         resolved_coach_profile_id = self.qa_mode_orchestrator.voice_profile_service.get(coach_profile_id).profile.id
         session = SessionRecord(
-            session_id=session_id,
+            session_id=resolved_session_id,
             scenario_id=scenario_id,
             language=language,
             coach_profile_id=resolved_coach_profile_id,
+            user_email=user_email,
         )
-        self.coach_panel_service.get_or_create_panel(session_id, language)
+        self.coach_panel_service.get_or_create_panel(resolved_session_id, language)
         self.qa_mode_orchestrator.register_session(
-            session_id,
+            resolved_session_id,
             scenario_id,
             language,
             resolved_coach_profile_id,
         )
-        self.sessions[session_id] = session
+        self.sessions[resolved_session_id] = session
         return session
 
     def get_session(self, session_id: str) -> SessionRecord | None:
@@ -269,8 +276,10 @@ class SessionManager:
         if session is None:
             return None
 
+        duration_ms = self._build_elapsed_ms(session)
+        session.finished_duration_ms = duration_ms
         session.status = "finished"
-        await self._mark_report_session_finished(session, self._build_elapsed_ms(session))
+        await self._mark_report_session_finished(session, duration_ms)
 
         try:
             await self.stt_service.finish_session(session_id)
@@ -322,6 +331,12 @@ class SessionManager:
             self.coach_panel_service.close_session(session.session_id)
             self.qa_mode_orchestrator.close_session(session.session_id)
             if session.status != "finished":
+                asyncio.create_task(
+                    auth_service.release_session(
+                        email=session.user_email,
+                        session_id=session.session_id,
+                    )
+                )
                 self.report_job_service.cancel_session(session.session_id)
             asyncio.create_task(self.stt_service.close_session(session.session_id))
             asyncio.create_task(self.omni_coach_service.close_session(session.session_id))
@@ -331,6 +346,10 @@ class SessionManager:
     async def handle_client_message(self, session: SessionRecord, message: ClientMessage, websocket: WebSocket) -> None:
         if message.type == "ping":
             await websocket.send_json(PongEvent().model_dump())
+            return
+
+        if session.status == "finished":
+            await websocket.send_json(ErrorEvent(message="训练会话已结束。").model_dump())
             return
 
         if message.type == "start_stream":

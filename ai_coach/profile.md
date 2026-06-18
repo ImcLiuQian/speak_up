@@ -9,7 +9,6 @@ AI 教练画像的事实源是 `ai_coach/profiles.json`。前端在 `frontend/sr
 - `id`：稳定画像 id，用于 URL 查询参数、API payload、问答声音选择和报告元数据。
 - `name`：UI 展示的教练名。
 - `persona_type`：教练行为类型，也会映射到后端 `VoiceStyle`。
-- `origin_name`：可读的灵感来源标签。
 - `avatar_file`：头像文件名，前端期望文件位于 `frontend/public/ai-coach/`。
 - `slogan`、`bio`、`live_status`：教练选择和 live 状态展示文案。
 - `voice_profile`：前端展示用的声音描述。
@@ -22,42 +21,42 @@ AI 教练画像的事实源是 `ai_coach/profiles.json`。前端在 `frontend/sr
 
 | id | name | persona | backend style | voice label | provider voice | omni voice |
 | --- | --- | --- | --- | --- | --- | --- |
-| `duojiong_he` | 何多炅 | 温暖型 | `gentle` | 何多炅 · 温暖型教练 | `Ethan` | `Raymond` |
-| `youge_hu` | 胡有歌 | 严肃型 | `professional` | 胡有歌 · 严肃型教练 | `Ethan` | `Raymond` |
-| `xiaoling_jia` | 贾小玲 | 鼓励型 | `encouraging` | 贾小玲 · 鼓励型教练 | `Serena` | `Liora Mira` |
-| `daxing_jin` | 金大星 | 压力型 | `firm` | 金大星 · 压力型教练 | `Serena` | `Liora Mira` |
+| `warm_voice_coach` | 暖声教练 | 温暖型 | `gentle` | 暖声教练 · 温暖型教练 | `Ethan` | `Raymond` |
+| `sharp_logic_coach` | 锋芒教练 | 严肃型 | `professional` | 锋芒教练 · 严肃型教练 | `Ethan` | `Raymond` |
+| `bright_energy_coach` | 元气教练 | 鼓励型 | `encouraging` | 元气教练 · 鼓励型教练 | `Serena` | `Liora Mira` |
+| `high_standards_coach` | 高标准教练 | 压力型 | `firm` | 高标准教练 · 压力型教练 | `Serena` | `Liora Mira` |
 
 `VoiceProfileService` 当前硬编码了 gender 映射：
 
-- `duojiong_he`：male
-- `youge_hu`：male
-- `xiaoling_jia`：female
-- `daxing_jin`：female
+- `warm_voice_coach`：male
+- `sharp_logic_coach`：male
+- `bright_energy_coach`：female
+- `high_standards_coach`：female
 
 ## 画像行为
 
-### 何多炅
+### 暖声教练
 
 - 类型：温暖、耐心、安抚。
 - 声音记忆点：放松、有微笑感的深夜电台男声。
 - 问答行为：缓解焦虑，用温和承接语，但仍然追关键点。
 - 报告行为：鼓励、有陪伴感，同时保留专业判断。
 
-### 胡有歌
+### 锋芒教练
 
 - 类型：严肃、克制、锋利。
 - 声音记忆点：低频、稳重、有电影旁白感。
 - 问答行为：问题直接，推动用户讲核心观点。
 - 报告行为：简洁明确，强调优先级，减少情绪化夸奖。
 
-### 贾小玲
+### 元气教练
 
 - 类型：热情、鼓励、高能量。
-- 声音记忆点：综艺气氛组式的跃动感。
+- 声音记忆点：跃动、有感染力。
 - 问答行为：先肯定，再把用户往前推一步。
 - 报告行为：先指出亮点，再给改进动作，降低挫败感。
 
-### 金大星
+### 高标准教练
 
 - 类型：高压、干脆、要求高。
 - 声音记忆点：锋利的职场高管式表达。

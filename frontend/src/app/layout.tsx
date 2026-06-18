@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AppAuthGate } from "@/components/session/app-auth-gate";
 import { SessionProvider } from "@/components/session/session-provider";
 
 import "./globals.css";
@@ -21,7 +22,9 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full bg-slate-50 text-slate-950">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <AppAuthGate>{children}</AppAuthGate>
+        </SessionProvider>
       </body>
     </html>
   );

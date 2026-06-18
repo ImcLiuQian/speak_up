@@ -9,6 +9,7 @@ import {
   type RealtimeEvent,
 } from "@/lib/api";
 import { getApiBaseUrl } from "@/lib/api-base";
+import { getMediaCaptureBlockedMessage, getMediaCaptureUnavailableState } from "@/lib/media-permissions";
 import type {
   CoachPanelState,
   CapturedVideoFrame,
@@ -1128,6 +1129,11 @@ export function useMockSession(setup: SessionSetup) {
 
   const startAudioCapture = useCallback(async () => {
     mainSpeakerAudioGateRef.current = createMainSpeakerAudioGateState();
+    const unavailableState = getMediaCaptureUnavailableState();
+    if (unavailableState) {
+      throw new Error(getMediaCaptureBlockedMessage(unavailableState, "microphone"));
+    }
+
     const stream = await navigator.mediaDevices.getUserMedia(AUDIO_CAPTURE_CONSTRAINTS);
     audioStreamRef.current = stream;
 
@@ -1216,7 +1222,7 @@ export function useMockSession(setup: SessionSetup) {
     });
 
     try {
-      const session = await startRealtimeSession(setup.scenarioId, setup.language, setup.coachProfileId);
+      const session = await startRealtimeSession(setup.scenarioId, setup.language, setup.coachProfileId, setup.authToken ?? null);
       const socket = new WebSocket(session.websocketUrl);
       socketRef.current = socket;
 
@@ -1376,9 +1382,9 @@ export function useMockSession(setup: SessionSetup) {
           socketStatus: "closed",
         }));
       });
-    } catch {
+    } catch (error) {
       setSessionState({
-        error: "实时会话启动失败",
+        error: error instanceof Error ? error.message : "实时会话启动失败",
         isConnecting: false,
         isFinalizing: false,
         sessionId: null,
@@ -1399,6 +1405,7 @@ export function useMockSession(setup: SessionSetup) {
     sessionState.isFinalizing,
     setup.documentName,
     setup.documentText,
+    setup.authToken,
     setup.coachProfileId,
     setup.language,
     setup.manualText,
@@ -1421,7 +1428,7 @@ export function useMockSession(setup: SessionSetup) {
       await stopAudioCapture();
       await waitForPendingChunkTasks();
       if (sessionState.sessionId) {
-        await finishRealtimeSession(sessionState.sessionId);
+        await finishRealtimeSession(sessionState.sessionId, setup.authToken ?? null);
       }
       clearSocket();
     } catch (error) {
@@ -1431,7 +1438,7 @@ export function useMockSession(setup: SessionSetup) {
     } finally {
       setSessionState((previous) => ({ ...previous, isFinalizing: false }));
     }
-  }, [clearActiveTranscript, clearMediaTimer, clearSocket, sessionState.sessionId, stopAudioCapture, waitForPendingChunkTasks]);
+  }, [clearActiveTranscript, clearMediaTimer, clearSocket, sessionState.sessionId, setup.authToken, stopAudioCapture, waitForPendingChunkTasks]);
 
   const registerVideoFrameProvider = useCallback((provider: () => Promise<CapturedVideoFrame | null>) => {
     videoFrameProviderRef.current = provider;

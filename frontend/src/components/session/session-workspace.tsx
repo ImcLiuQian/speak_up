@@ -7,7 +7,9 @@ import { getCoachProfileById, getCoachProfiles, isCoachProfileId } from "@/lib/c
 import { CoachEntryDialog } from "@/components/session/coach-entry-dialog";
 import { CoachSidebarHeader } from "@/components/session/coach-sidebar-header";
 import { LiveAnalysisPanel } from "@/components/session/live-analysis-panel";
+import { LoginGate } from "@/components/session/login-gate";
 import { QAControlBar } from "@/components/session/qa-control-bar";
+import { AccountSettingsButton } from "@/components/session/account-settings-button";
 import { SessionStage } from "@/components/session/session-stage";
 import { SessionToolbar } from "@/components/session/session-toolbar";
 import { SessionControls } from "@/components/session/session-controls";
@@ -15,8 +17,17 @@ import { useSessionResult } from "@/components/session/session-provider";
 import { primeAudioPlayback } from "@/lib/audio-playback";
 import { TranscriptPanel } from "@/components/session/transcript-panel";
 import { useMockSession } from "@/hooks/useMockSession";
-import { extractDocumentText, uploadSessionReplayMedia } from "@/lib/api";
+import {
+  clearStoredAuthToken,
+  extractDocumentText,
+  getCurrentAccount,
+  getStoredAuthToken,
+  uploadSessionReplayMedia,
+  type AuthSession,
+} from "@/lib/api";
+import { getMediaCaptureUnavailableState } from "@/lib/media-permissions";
 import type {
+  CameraPermissionState,
   CoachProfileId,
   LanguageOption,
   ScenarioType,
@@ -164,7 +175,7 @@ export function SessionWorkspace({
   const [trainingMode, setTrainingMode] = useState<TrainingMode>("document_speech");
   const [qaEnabled, setQAEnabled] = useState(false);
   const [qaStoppedByUser, setQAStoppedByUser] = useState(false);
-  const [cameraPermissionState, setCameraPermissionState] = useState<"idle" | "granted" | "denied">("idle");
+  const [cameraPermissionState, setCameraPermissionState] = useState<CameraPermissionState>("idle");
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [coachSelectionOpen, setCoachSelectionOpen] = useState(false);
   const [routeParamsReady, setRouteParamsReady] = useState(false);
@@ -180,18 +191,47 @@ export function SessionWorkspace({
   const replaySessionIdRef = useRef<string | null>(null);
   const replayStartAtMsRef = useRef(0);
   const replayMimeTypeRef = useRef("");
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [accountPanelOpen, setAccountPanelOpen] = useState(false);
+  const [accountNotice, setAccountNotice] = useState<string | null>(null);
+
+  const refreshAuthSession = useCallback(async () => {
+    setAuthLoading(true);
+    const token = getStoredAuthToken();
+    if (!token) {
+      setAuthSession(null);
+      setAuthLoading(false);
+      return;
+    }
+    try {
+      const nextSession = await getCurrentAccount(token);
+      setAuthSession(nextSession);
+    } catch {
+      clearStoredAuthToken();
+      setAuthSession(null);
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+  const isAuthenticated = Boolean(authSession);
 
   useEffect(() => {
     router.prefetch("/report");
   }, [router]);
 
   useEffect(() => {
+    void refreshAuthSession();
+  }, [refreshAuthSession]);
+
+  useEffect(() => {
     let active = true;
     let ownedStream: MediaStream | null = null;
 
     async function enableCamera() {
-      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-        setCameraPermissionState("denied");
+      const unavailableState = getMediaCaptureUnavailableState();
+      if (unavailableState) {
+        setCameraPermissionState(unavailableState);
         return;
       }
 
@@ -215,6 +255,14 @@ export function SessionWorkspace({
       }
     }
 
+    if (!isAuthenticated) {
+      replayCameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+      replayCameraStreamRef.current = null;
+      setCameraStream(null);
+      setCameraPermissionState("idle");
+      return;
+    }
+
     void enableCamera();
 
     return () => {
@@ -222,7 +270,7 @@ export function SessionWorkspace({
       replayCameraStreamRef.current = null;
       ownedStream?.getTracks().forEach((track) => track.stop());
     };
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const routeCoachProfileId = readCoachProfileIdFromLocation();
@@ -252,6 +300,7 @@ export function SessionWorkspace({
     scenarioId,
     language,
     coachProfileId: selectedCoachProfileId,
+    authToken: authSession?.token ?? null,
     trainingMode,
     documentName: documentAsset?.name ?? null,
     documentText: documentAsset?.extractedText ?? documentAsset?.markdownSource ?? null,
@@ -408,6 +457,15 @@ export function SessionWorkspace({
   }, [audioCaptureStream]);
 
   const controlsDisabled = isLoading;
+  const handleStartSession = useCallback(() => {
+    if (!authSession) {
+      setAccountNotice("请先登录后再开始训练。");
+      setAccountPanelOpen(true);
+      return;
+    }
+    setAccountNotice(null);
+    void start();
+  }, [authSession, start]);
   const statusMessage = useMemo(
     () =>
       (documentLoading ? "正在抽取文档正文..." : null) ??
@@ -630,7 +688,7 @@ export function SessionWorkspace({
     setDocumentError(null);
 
     try {
-      const extraction = await extractDocumentText(file);
+      const extraction = await extractDocumentText(file, authSession?.token ?? null);
       const textSource = extraction.text;
 
       if (isPdf) {
@@ -687,7 +745,7 @@ export function SessionWorkspace({
     }
   };
 
-  const finishSession = () => {
+  const finishSession = useCallback(() => {
     const finishedSessionId = sessionId;
     const finishingCoachProfileId = selectedCoachProfileId;
     const { active, committed } = flushTranscript();
@@ -717,9 +775,25 @@ export function SessionWorkspace({
       });
 
     window.setTimeout(() => {
-      void finish().catch(() => undefined);
+      void finish()
+        .then(() => refreshAuthSession())
+        .catch(() => undefined);
     }, 0);
-  };
+  }, [
+    finish,
+    flushTranscript,
+    language,
+    qaState.enabled,
+    refreshAuthSession,
+    router,
+    saveResult,
+    scenarioId,
+    selectedCoachProfileId,
+    sessionId,
+    silenceInterviewer,
+    stopQA,
+    stopReplayCapture,
+  ]);
 
   const activeCoachProfileId = qaState.enabled
     ? (qaState.voiceProfileId ?? selectedCoachProfileId)
@@ -763,6 +837,18 @@ export function SessionWorkspace({
           : null);
   const displayedQAPhase = qaEnded ? "completed" : qaState.phase;
 
+  if (!authSession) {
+    return (
+      <LoginGate
+        loading={authLoading}
+        onSessionChange={(nextSession) => {
+          setAuthSession(nextSession);
+          setAccountNotice(null);
+        }}
+      />
+    );
+  }
+
   return (
     <main className="h-screen overflow-hidden bg-slate-100 p-4 text-slate-950 md:p-5">
       <input
@@ -790,7 +876,7 @@ export function SessionWorkspace({
                 disabled={controlsDisabled}
                 isRunning={isRunning}
                 onFinish={finishSession}
-                onStart={start}
+                onStart={handleStartSession}
               />
             }
             qaControls={
@@ -863,6 +949,22 @@ export function SessionWorkspace({
           onConfirm={() => setCoachSelectionOpen(false)}
         />
       ) : null}
+      <AccountSettingsButton
+        authSession={authSession}
+        loading={authLoading}
+        notice={accountNotice}
+        open={accountPanelOpen}
+        onOpenChange={(open) => {
+          setAccountPanelOpen(open);
+          if (!open) {
+            setAccountNotice(null);
+          }
+        }}
+        onSessionChange={(nextSession) => {
+          setAuthSession(nextSession);
+          setAccountNotice(null);
+        }}
+      />
     </main>
   );
 }

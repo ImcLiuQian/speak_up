@@ -152,6 +152,22 @@ class VoiceProfile(BaseModel):
     style: VoiceStyle
 
 
+class AccountUser(BaseModel):
+    email: str
+    displayName: str
+    createdAt: str | None = None
+
+
+class AuthLoginRequest(BaseModel):
+    account: str
+    password: str
+
+
+class AuthSessionResponse(BaseModel):
+    token: str
+    user: AccountUser
+
+
 class DocumentPreview(BaseModel):
     kind: DocumentPreviewKind = "none"
     status: DocumentPreviewStatus = "unavailable"
@@ -274,6 +290,7 @@ class ReportRepositoryState(BaseModel):
     scenarioId: ScenarioType
     language: LanguageOption
     coachProfileId: str | None = None
+    userEmail: str | None = None
     lastCoveredMs: int = 0
     windowCount: int = 0
     status: ReportStatus = "processing"

@@ -1,11 +1,12 @@
 const ENV_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"]);
 
 function normalizeBaseUrl(url: string) {
   return url.replace(/\/+$/, "");
 }
 
-function buildBrowserHostBaseUrl() {
+function buildBrowserBaseUrl() {
   if (typeof window === "undefined") {
     return null;
   }
@@ -15,7 +16,18 @@ function buildBrowserHostBaseUrl() {
     return null;
   }
 
-  return `http://${hostname}:8000`;
+  if (LOCAL_HOSTNAMES.has(hostname)) {
+    return `http://${hostname}:8000`;
+  }
+
+  return window.location.origin;
+}
+
+function shouldIncludeLocalFallbacks() {
+  if (typeof window === "undefined") {
+    return true;
+  }
+  return LOCAL_HOSTNAMES.has(window.location.hostname.trim());
 }
 
 export function getApiBaseUrlCandidates() {
@@ -25,13 +37,15 @@ export function getApiBaseUrlCandidates() {
     candidates.add(normalizeBaseUrl(ENV_API_BASE_URL));
   }
 
-  const browserHostBaseUrl = buildBrowserHostBaseUrl();
+  const browserHostBaseUrl = buildBrowserBaseUrl();
   if (browserHostBaseUrl) {
     candidates.add(normalizeBaseUrl(browserHostBaseUrl));
   }
 
-  candidates.add(DEFAULT_API_BASE_URL);
-  candidates.add("http://localhost:8000");
+  if (shouldIncludeLocalFallbacks()) {
+    candidates.add(DEFAULT_API_BASE_URL);
+    candidates.add("http://localhost:8000");
+  }
 
   return Array.from(candidates);
 }

@@ -4,14 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/card";
 import { analyzeBodyVisualHint } from "@/lib/body-visual-hints";
-import type { CapturedVideoFrame } from "@/types/session";
+import { getMediaCaptureBlockedMessage, getMediaCaptureUnavailableState } from "@/lib/media-permissions";
+import type { CameraPermissionState, CapturedVideoFrame } from "@/types/session";
 
 interface CameraPanelProps {
   children: React.ReactNode;
   isRunning: boolean;
   elapsedSeconds: number;
   cameraStream?: MediaStream | null;
-  cameraPermissionState?: "idle" | "granted" | "denied";
+  cameraPermissionState?: CameraPermissionState;
   onFrameCaptureReady?: (capture: () => Promise<CapturedVideoFrame | null>) => void;
   onStreamReady?: (stream: MediaStream | null) => void;
   variant?: "stage" | "inset";
@@ -19,6 +20,24 @@ interface CameraPanelProps {
 
 const MAX_CAPTURE_WIDTH = 1280;
 const MAX_CAPTURE_HEIGHT = 720;
+
+function getCameraIssueCopy(permissionState: CameraPermissionState) {
+  if (permissionState === "idle" || permissionState === "granted") {
+    return null;
+  }
+
+  const title =
+    permissionState === "insecure"
+      ? "需要 HTTPS"
+      : permissionState === "unavailable"
+        ? "摄像头不可用"
+        : "摄像头未授权";
+
+  return {
+    title,
+    description: getMediaCaptureBlockedMessage(permissionState, "camera"),
+  };
+}
 
 export function CameraPanel({
   children,
@@ -31,7 +50,7 @@ export function CameraPanel({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamReadyCallbackRef = useRef(onStreamReady);
-  const [localPermissionState, setLocalPermissionState] = useState<"idle" | "granted" | "denied">("idle");
+  const [localPermissionState, setLocalPermissionState] = useState<CameraPermissionState>("idle");
   const isExternallyManaged = cameraStream !== undefined;
   const permissionState = isExternallyManaged
     ? cameraPermissionState ?? (cameraStream ? "granted" : "idle")
@@ -65,6 +84,13 @@ export function CameraPanel({
     let stream: MediaStream | null = null;
 
     async function enableCamera() {
+      const unavailableState = getMediaCaptureUnavailableState();
+      if (unavailableState) {
+        setLocalPermissionState(unavailableState);
+        streamReadyCallbackRef.current?.(null);
+        return;
+      }
+
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         if (videoRef.current) {
@@ -119,14 +145,16 @@ export function CameraPanel({
     });
   }, [onFrameCaptureReady]);
 
+  const issueCopy = getCameraIssueCopy(permissionState);
+
   if (variant === "inset") {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[18px] bg-transparent text-white">
         <div className="relative min-h-0 flex-1">
-          {permissionState === "denied" ? (
+          {issueCopy ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 rounded-[18px] bg-slate-950/70 px-4 text-center">
-              <div className="rounded-full bg-white/10 px-3 py-1 text-xs text-slate-300">摄像头未授权</div>
-              <p className="text-xs leading-5 text-slate-400">右上角视频预览不可用</p>
+              <div className="rounded-full bg-white/10 px-3 py-1 text-xs text-slate-300">{issueCopy.title}</div>
+              <p className="text-xs leading-5 text-slate-400">{issueCopy.description}</p>
             </div>
           ) : (
             <>
@@ -144,11 +172,11 @@ export function CameraPanel({
   return (
     <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border-white/60 bg-slate-950 text-white shadow-[0_18px_45px_rgba(15,23,42,0.18)]">
       <div className="relative min-h-0 flex-1">
-        {permissionState === "denied" ? (
+        {issueCopy ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center">
-            <div className="rounded-full bg-white/10 px-4 py-2 text-sm text-slate-300">摄像头未授权</div>
+            <div className="rounded-full bg-white/10 px-4 py-2 text-sm text-slate-300">{issueCopy.title}</div>
             <p className="max-w-md text-sm leading-7 text-slate-400">
-              当前先展示原型占位态。后续接真实训练时，这里会保留用户视频和后端视频理解结果。
+              {issueCopy.description}
             </p>
           </div>
         ) : (

@@ -4,11 +4,11 @@ import { CameraPanel } from "@/components/session/camera-panel";
 import { DocumentAssetPreview } from "@/components/session/document-viewer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { CapturedVideoFrame, TrainingDocumentAsset } from "@/types/session";
+import type { CameraPermissionState, CapturedVideoFrame, TrainingDocumentAsset } from "@/types/session";
 
 interface DocumentStageProps {
   children: React.ReactNode;
-  cameraPermissionState: "idle" | "granted" | "denied";
+  cameraPermissionState: CameraPermissionState;
   cameraStream: MediaStream | null;
   documentAsset: TrainingDocumentAsset | null;
   elapsedSeconds: number;

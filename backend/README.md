@@ -15,23 +15,68 @@
 | --- | --- | --- |
 | `GET` | `/health` | 存活检查。 |
 | `GET` | `/api/qa/voice-profiles` | 返回从 `ai_coach/profiles.json` 派生的教练声音画像。 |
-| `POST` | `/api/document/extract` | 抽取并压缩 PDF 或 Markdown 正文，供问答上下文使用。 |
-| `POST` | `/api/session/start` | 创建实时会话并返回 WebSocket URL。 |
+| `POST` | `/api/auth/login` | 校验内测账号和密码；首次登录时自动创建本地账号记录。 |
+| `GET` | `/api/auth/me` | 根据 `Authorization: Bearer <token>` 返回当前账号。 |
+| `POST` | `/api/document/extract` | 登录后抽取并压缩 PDF 或 Markdown 正文，供问答上下文使用；单文件最大 20MB。 |
+| `POST` | `/api/session/start` | 登录后创建实时会话，检查同账号 active session，并返回 WebSocket URL。 |
 | `GET` | `/api/session/{session_id}` | 返回会话状态和计数器。 |
-| `POST` | `/api/session/{session_id}/finish` | 结束会话，并标记报告素材完结。 |
+| `POST` | `/api/session/{session_id}/finish` | 登录后结束会话，释放 active session，并标记报告素材完结。 |
 | `GET` | `/api/session/{session_id}/report` | 返回最终报告，或返回生成中的占位报告。 |
 | `POST` | `/api/session/{session_id}/report/generate` | 触发最终报告生成。 |
 | `GET` | `/api/session/{session_id}/report/windows` | 查看中间报告窗口。 |
 | `GET` | `/api/session/{session_id}/report/artifacts` | 查看原始报告素材。 |
 | `GET` | `/api/session/{session_id}/report/signals` | 查看重建后的文字稿、问答和教练信号统计。 |
 | `GET` | `/api/session/{session_id}/replay` | 返回回放时间轴元数据。 |
-| `POST` | `/api/session/{session_id}/replay/media` | 上传回放音频或视频。 |
+| `POST` | `/api/session/{session_id}/replay/media` | 上传回放音频或视频；只接受常见音视频类型，单文件最大 512MB。 |
 | `GET` | `/api/session/{session_id}/replay/media` | 下载回放媒体。 |
 | `GET` | `/api/session/{session_id}/qa/turns/{turn_id}/audio` | 下载单轮问答音频。 |
 
+## 账号与存储配置
+
+内测账号池由后端配置管理，登录 session token hash 和 active session 写入 SQLite：
+
+```bash
+SPEAK_UP_AUTH_DATA_DIR=output/auth_data
+SPEAK_UP_AUTH_DB_PATH=output/auth_data/auth.sqlite3
+
+SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"account-id","password":"password","displayName":"内测用户"}]'
+```
+
+`SPEAK_UP_INTERNAL_ACCOUNTS` 必须在运行环境里配置；为空时登录接口会返回“内测账号池未配置”，避免把真实账号口令长期写进仓库。
+
+回放媒体默认保存在本地报告目录。接阿里云 OSS 时打开开关并配置 bucket：
+
+```bash
+SPEAK_UP_OSS_ENABLED=true
+SPEAK_UP_OSS_BUCKET=...
+SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
+SPEAK_UP_OSS_ACCESS_KEY_ID=...
+SPEAK_UP_OSS_ACCESS_KEY_SECRET=...
+SPEAK_UP_OSS_PUBLIC_BASE_URL=https://cdn.example.com
+SPEAK_UP_OSS_PREFIX=speak-up
+```
+
+`SPEAK_UP_OSS_ENABLED` 默认是 `false`，即使用本地磁盘。设置为 `true` 后，回放视频上传到 OSS，本地只保留 `replay_media.json` 元数据。`SPEAK_UP_OSS_PUBLIC_BASE_URL` 可为空；为空时回放接口会生成短期签名 URL，适合私有 bucket。旧变量 `SPEAK_UP_STORAGE_DRIVER=oss` 仍兼容，但新部署优先使用 `SPEAK_UP_OSS_ENABLED`。
+
+如果生产环境已经存在本地回放媒体，配置好 OSS 后可以迁移：
+
+```bash
+cd /srv/speak_up/backend
+SPEAK_UP_OSS_ENABLED=true \
+SPEAK_UP_OSS_BUCKET=... \
+SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com \
+SPEAK_UP_OSS_ACCESS_KEY_ID=... \
+SPEAK_UP_OSS_ACCESS_KEY_SECRET=... \
+.venv/bin/python scripts/migrate_replay_media_to_oss.py --report-root output/report_data
+```
+
+迁移脚本会上传 `replay_media.*` 并把 `replay_media.json` 改为 OSS 元数据。默认会保留 ECS 本地媒体文件作为备份；确认 OSS 回放可用后，再追加 `--delete-local` 清理已迁移的本地媒体文件。如果元数据引用的本地媒体缺失，脚本默认失败并打印缺失记录；确认可以忽略时再追加 `--allow-missing`。
+
 ## WebSocket API
 
-会话 WebSocket 路径是 `/ws/session/{session_id}`。请求和事件结构定义在 `app/schemas.py` 的 `ClientMessage` 与事件模型中。
+会话 WebSocket 路径是 `/ws/session/{session_id}`。同域部署默认用登录 cookie 完成 WebSocket 鉴权，服务端在连接时校验 session owner；只有显式设置 `SPEAK_UP_WEBSOCKET_TOKEN_IN_QUERY=true` 时，`POST /api/session/start` 返回的 `websocketUrl` 才会附带当前 token，用于跨域部署兜底。请求和事件结构定义在 `app/schemas.py` 的 `ClientMessage` 与事件模型中。
+
+后端会限制同一个账号同时只能有一个 active session，避免同账号多开时互相覆盖训练状态。
 
 客户端消息类型：
 
@@ -66,6 +111,12 @@
 
 ## 数据落盘
 
+账号和登录数据默认写到后端进程工作目录下的 SQLite 数据库。如果从 `backend/` 目录启动服务，实际路径就是 `backend/output/auth_data/auth.sqlite3`。
+
+- `users`：内测账号、昵称、兼容旧数据的密码哈希/legacy token 和创建时间。
+- `auth_sessions`：登录 token 的 SHA-256 hash、账号、过期时间和最近访问时间。
+- `active_sessions`：按账号记录当前进行中的训练 session，服务重启时会自动清空。
+
 报告和回放数据默认写到后端进程工作目录下的 `output/report_data`。如果从 `backend/` 目录启动服务，实际路径就是 `backend/output/report_data`。
 
 每个 session 目录可能包含：
@@ -75,7 +126,7 @@
 - `report_state.json`：报告状态、进度和窗口覆盖信息。
 - `windows/*.json`：中间报告窗口包。
 - `final_report.json`：最终报告响应。
-- `replay_media.*` 和 `replay_media.json`：上传的回放媒体和元数据。
+- `replay_media.*` 和 `replay_media.json`：本地上传的回放媒体和元数据；启用 OSS 后只保存元数据，视频对象写入 OSS。
 
 ## 评分维度
 

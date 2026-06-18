@@ -40,6 +40,7 @@ class ReportRepository:
         scenario_id: ScenarioType,
         language: LanguageOption,
         coach_profile_id: str | None = None,
+        user_email: str | None = None,
     ) -> None:
         async with self._locks[session_id]:
             session_dir = self._session_dir(session_id)
@@ -51,6 +52,7 @@ class ReportRepository:
                     scenarioId=scenario_id,
                     language=language,
                     coachProfileId=coach_profile_id,
+                    userEmail=user_email,
                 )
                 self._write_json(self._state_path(session_id), state.model_dump())
 

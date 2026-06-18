@@ -19,6 +19,7 @@ from app.schemas import (
 from app.services.report_artifact_service import ReportArtifactService
 from app.services.report_repository import ReportRepository
 from app.services.report_signal_service import ReportSignalService
+from app.services.object_storage_service import StoredObject, object_storage_service
 
 
 DEFAULT_COACH_WINDOW_MS = 8000
@@ -26,7 +27,8 @@ DEFAULT_COACH_WINDOW_MS = 8000
 
 @dataclass(frozen=True)
 class ReplayMediaFile:
-    path: Path
+    path: Path | None
+    url: str | None
     media_type: str
     duration_ms: int
     content_type: str | None = None
@@ -69,21 +71,29 @@ class ReplayService:
         media_type = self._resolve_media_type(extension, content_type)
         session_dir = self._session_dir(session_id)
         media_path = session_dir / f"replay_media{extension}"
+        stored_object = await object_storage_service.save_replay_media(
+            session_id=session_id,
+            extension=extension,
+            content_type=content_type,
+            data=data,
+        )
 
         async with self._locks[session_id]:
             session_dir.mkdir(parents=True, exist_ok=True)
             for existing in session_dir.glob("replay_media.*"):
-                if existing != media_path and existing.is_file():
+                if existing.name != "replay_media.json" and existing != media_path and existing.is_file():
                     existing.unlink(missing_ok=True)
-            media_path.write_bytes(data)
+            if stored_object is None:
+                media_path.write_bytes(data)
             self._media_meta_path(session_id).write_text(
                 json.dumps(
-                    {
-                        "fileName": media_path.name,
-                        "mediaType": media_type,
-                        "contentType": content_type,
-                        "durationMs": max(0, int(duration_ms)),
-                    },
+                    self._build_media_meta(
+                        media_path=media_path,
+                        stored_object=stored_object,
+                        media_type=media_type,
+                        content_type=content_type,
+                        duration_ms=duration_ms,
+                    ),
                     ensure_ascii=False,
                     indent=2,
                 ),
@@ -103,6 +113,19 @@ class ReplayService:
 
         async with self._locks[session_id]:
             payload = json.loads(meta_path.read_text(encoding="utf-8"))
+            if payload.get("storage") == "oss":
+                object_key = str(payload.get("objectKey") or "").strip()
+                url = object_storage_service.build_read_url(object_key) if object_key else str(payload.get("url") or "").strip()
+                if not url:
+                    return None
+                return ReplayMediaFile(
+                    path=None,
+                    url=url,
+                    media_type=str(payload.get("mediaType") or "video"),
+                    duration_ms=max(0, int(payload.get("durationMs") or 0)),
+                    content_type=str(payload.get("contentType") or "") or None,
+                )
+
             file_name = str(payload.get("fileName") or "").strip()
             if not file_name:
                 return None
@@ -116,6 +139,7 @@ class ReplayService:
 
             return ReplayMediaFile(
                 path=media_path,
+                url=None,
                 media_type=str(payload.get("mediaType") or self._resolve_media_type(media_path.suffix, content_type)),
                 duration_ms=max(0, int(payload.get("durationMs") or 0)),
                 content_type=content_type,
@@ -234,6 +258,33 @@ class ReplayService:
         if extension in {".wav", ".mp3", ".m4a", ".ogg"}:
             return "audio"
         return "video"
+
+    @staticmethod
+    def _build_media_meta(
+        *,
+        media_path: Path,
+        stored_object: StoredObject | None,
+        media_type: str,
+        content_type: str | None,
+        duration_ms: int,
+    ) -> dict:
+        base_meta = {
+            "mediaType": media_type,
+            "contentType": content_type,
+            "durationMs": max(0, int(duration_ms)),
+        }
+        if stored_object is None:
+            return {
+                **base_meta,
+                "storage": "local",
+                "fileName": media_path.name,
+            }
+        return {
+            **base_meta,
+            "storage": "oss",
+            "objectKey": stored_object.object_key,
+            "url": stored_object.url,
+        }
 
     @staticmethod
     def _normalize_dimension_id(value: object) -> CoachDimensionId:
