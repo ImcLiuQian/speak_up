@@ -57,13 +57,13 @@ flowchart LR
     Report --> UI
 ```
 
-The current implementation uses Alibaba Cloud DashScope / Model Studio. All Alibaba Cloud model calls share one API key:
+The current implementation is built on Alibaba Cloud DashScope / Model Studio. All Alibaba Cloud model calls are authenticated with one API key:
 
 ```bash
 export DASHSCOPE_API_KEY=sk-...
 ```
 
-The model names below already have defaults; only set the optional variables if you want to override a specific model.
+The table below lists the default model for each capability. You do not need to configure these model names one by one unless you want to override a specific model.
 
 | Capability | Default model | What it does | Optional env var |
 | --- | --- | --- | --- |
@@ -75,14 +75,14 @@ The model names below already have defaults; only set the optional variables if 
 | Report Windows | `qwen-flash` | Summarizes performance over short report windows | `ALIYUN_REPORT_WINDOW_MODEL` |
 | Final Report | `qwen-flash`, fallback `qwen-plus-latest` | Builds the final session report and suggestions | `ALIYUN_REPORT_BRAIN_MODEL`, `ALIYUN_REPORT_BRAIN_FALLBACK_MODEL` |
 
-If you do not want to use Alibaba Cloud, replace the backend model provider layer instead of only changing one key:
+If you do not want to use Alibaba Cloud, replace the backend model provider layer instead of only changing the API key:
 
 - Realtime ASR: replace `backend/app/services/stt_service.py`.
 - Live Coach: replace `backend/app/services/omni_service.py`.
 - Voice Q&A and TTS: replace `backend/app/services/qa_omni_realtime_service.py` and `backend/app/services/tts_service.py`.
 - Q&A Brain and reports: if the new provider is compatible with OpenAI Chat Completions, start by changing `ALIYUN_OPENAI_COMPAT_BASE_URL`, model names, and key loading; otherwise replace `backend/app/services/qa_brain_service.py` and `backend/app/services/report_brain_service.py`.
 
-When replacing providers, keep the request and response shapes in `backend/app/schemas.py` and `backend/app/main.py` stable so the training workspace, report page, and replay page do not need to change.
+When replacing providers, keep the request and response contracts in `backend/app/schemas.py` and `backend/app/main.py` stable to avoid follow-up changes in the training workspace, report page, and replay page.
 
 ## Local Development
 
@@ -93,7 +93,7 @@ export DASHSCOPE_API_KEY=sk-...
 export SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"demo","password":"change-me","displayName":"Demo User"}]'
 ```
 
-`DASHSCOPE_API_KEY` is used for Alibaba Cloud DashScope model calls. `SPEAK_UP_INTERNAL_ACCOUNTS` is the local internal account pool; do not commit real account credentials.
+`DASHSCOPE_API_KEY` is used for Alibaba Cloud DashScope model calls. `SPEAK_UP_INTERNAL_ACCOUNTS` is the local internal account pool.
 
 Start the backend:
 
@@ -113,7 +113,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000/login` and sign in with the account configured in `SPEAK_UP_INTERNAL_ACCOUNTS`. The frontend connects to `http://127.0.0.1:8000` by default. If your backend runs elsewhere, set `NEXT_PUBLIC_API_BASE_URL`.
+After both services are running, open `http://localhost:3000/login` and sign in with an account configured in `SPEAK_UP_INTERNAL_ACCOUNTS`. The frontend requests `http://127.0.0.1:8000` by default. Set `NEXT_PUBLIC_API_BASE_URL` if you need to connect to a different backend address.
 
 ## Quality Checks
 

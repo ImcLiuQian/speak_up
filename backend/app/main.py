@@ -59,9 +59,8 @@ def _allowed_cors_origins() -> list[str]:
     defaults = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://speakupcoach.cn",
-        "https://www.speakupcoach.cn",
-        "https://app.speakupcoach.cn",
+        "https://speakup.cn",
+        "https://www.speakup.cn",
     ]
     configured = [
         origin.strip().rstrip("/")

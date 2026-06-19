@@ -57,13 +57,13 @@ flowchart LR
     Report --> UI
 ```
 
-当前实现使用阿里云 DashScope / 百炼。所有阿里云模型调用统一读取一个 API Key：
+当前实现基于阿里云 DashScope / 百炼服务。所有阿里云模型调用均通过同一个 API Key 完成鉴权：
 
 ```bash
 export DASHSCOPE_API_KEY=sk-...
 ```
 
-下面这些模型名都有默认值，只有想替换具体模型时才需要额外配置对应变量。
+下表列出了当前各功能对应的默认模型。默认情况下无需逐项配置模型名称；仅在需要替换具体模型时，才需要设置对应的可选环境变量。
 
 | 功能 | 默认模型 | 用途 | 可选环境变量 |
 | --- | --- | --- | --- |
@@ -75,14 +75,14 @@ export DASHSCOPE_API_KEY=sk-...
 | 报告窗口 | `qwen-flash` | 分段整理训练过程中的表现 | `ALIYUN_REPORT_WINDOW_MODEL` |
 | 最终报告 | `qwen-flash`，兜底 `qwen-plus-latest` | 汇总整场训练报告和建议 | `ALIYUN_REPORT_BRAIN_MODEL`、`ALIYUN_REPORT_BRAIN_FALLBACK_MODEL` |
 
-如果不用阿里云，需要改后端的模型 provider 层，而不是只换一个 key：
+如果不使用阿里云，需要替换后端的模型 provider 层，而不能仅更换 API Key：
 
 - 实时转写：替换 `backend/app/services/stt_service.py`。
 - 实时教练：替换 `backend/app/services/omni_service.py`。
 - AI 问答语音和 TTS：替换 `backend/app/services/qa_omni_realtime_service.py`、`backend/app/services/tts_service.py`。
 - 问答思考和报告：如果新供应商兼容 OpenAI Chat Completions，可以优先改 `ALIYUN_OPENAI_COMPAT_BASE_URL`、模型名和 key 读取逻辑；否则替换 `backend/app/services/qa_brain_service.py`、`backend/app/services/report_brain_service.py`。
 
-替换时尽量保持 `backend/app/schemas.py` 和 `backend/app/main.py` 的输入输出不变，这样前端训练台、报告页和回放页不用跟着改。
+替换 provider 时，应尽量保持 `backend/app/schemas.py` 和 `backend/app/main.py` 的输入输出协议稳定，以避免前端训练台、报告页和回放页产生联动改造。
 
 ## 本地运行
 
@@ -93,7 +93,7 @@ export DASHSCOPE_API_KEY=sk-...
 export SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"demo","password":"change-me","displayName":"Demo User"}]'
 ```
 
-`DASHSCOPE_API_KEY` 用于阿里云 DashScope 模型调用。`SPEAK_UP_INTERNAL_ACCOUNTS` 是本地内测账号池；不要把真实账号密码提交到仓库。
+`DASHSCOPE_API_KEY` 用于阿里云 DashScope 模型调用。`SPEAK_UP_INTERNAL_ACCOUNTS` 是本地内测账号池。
 
 启动后端：
 
@@ -113,7 +113,7 @@ npm install
 npm run dev
 ```
 
-打开 `http://localhost:3000/login`，用你在 `SPEAK_UP_INTERNAL_ACCOUNTS` 里配置的账号密码登录。前端默认连接 `http://127.0.0.1:8000`；如果后端地址不同，再配置 `NEXT_PUBLIC_API_BASE_URL`。
+本地服务启动后，访问 `http://localhost:3000/login`，并使用 `SPEAK_UP_INTERNAL_ACCOUNTS` 中配置的账号密码登录。前端默认请求 `http://127.0.0.1:8000`；如需连接其他后端地址，可通过 `NEXT_PUBLIC_API_BASE_URL` 覆盖。
 
 ## 质量检查
 
