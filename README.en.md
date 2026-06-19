@@ -2,8 +2,6 @@
 
 [简体中文](README.md) | English
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
 Speak Up is an AI speech-training web prototype. It connects realtime transcription, delivery feedback, AI follow-up questions, replay review, and final reports into one practice loop, so each session becomes feedback that users can review and improve from.
 
 ## Features
@@ -59,7 +57,13 @@ flowchart LR
     Report --> UI
 ```
 
-The real AI path shares one `DASHSCOPE_API_KEY`. The model names below already have defaults; only set the optional variables if you want to override a model.
+The current implementation uses Alibaba Cloud DashScope / Model Studio. All Alibaba Cloud model calls share one API key:
+
+```bash
+export DASHSCOPE_API_KEY=sk-...
+```
+
+The model names below already have defaults; only set the optional variables if you want to override a specific model.
 
 | Capability | Default model | What it does | Optional env var |
 | --- | --- | --- | --- |
@@ -70,6 +74,15 @@ The real AI path shares one `DASHSCOPE_API_KEY`. The model names below already h
 | Q&A TTS | `qwen3-tts-instruct-flash-realtime` | Generates the AI interviewer voice | `ALIYUN_QA_TTS_MODEL` |
 | Report Windows | `qwen-flash` | Summarizes performance over short report windows | `ALIYUN_REPORT_WINDOW_MODEL` |
 | Final Report | `qwen-flash`, fallback `qwen-plus-latest` | Builds the final session report and suggestions | `ALIYUN_REPORT_BRAIN_MODEL`, `ALIYUN_REPORT_BRAIN_FALLBACK_MODEL` |
+
+If you do not want to use Alibaba Cloud, replace the backend model provider layer instead of only changing one key:
+
+- Realtime ASR: replace `backend/app/services/stt_service.py`.
+- Live Coach: replace `backend/app/services/omni_service.py`.
+- Voice Q&A and TTS: replace `backend/app/services/qa_omni_realtime_service.py` and `backend/app/services/tts_service.py`.
+- Q&A Brain and reports: if the new provider is compatible with OpenAI Chat Completions, start by changing `ALIYUN_OPENAI_COMPAT_BASE_URL`, model names, and key loading; otherwise replace `backend/app/services/qa_brain_service.py` and `backend/app/services/report_brain_service.py`.
+
+When replacing providers, keep the request and response shapes in `backend/app/schemas.py` and `backend/app/main.py` stable so the training workspace, report page, and replay page do not need to change.
 
 ## Local Development
 
@@ -113,10 +126,12 @@ npm run lint
 
 For backend validation, start FastAPI and check `/health`, login, session start, and the WebSocket session flow.
 
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=ImcLiuQian/speak_up&type=Date)](https://www.star-history.com/#ImcLiuQian/speak_up&Date)
+
+## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+This project is licensed under the [MIT License](LICENSE).
