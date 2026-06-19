@@ -2,8 +2,6 @@
 
 简体中文 | [English](README.en.md)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
 Speak Up 是一个 AI 演讲训练 Web 原型。它把实时转写、表达反馈、AI 追问、视频回放和训练报告串成一条练习流程，帮助用户把每一次开口都变成可复盘的反馈。
 
 ## 功能概览
@@ -59,7 +57,13 @@ flowchart LR
     Report --> UI
 ```
 
-真实 AI 链路共用 `DASHSCOPE_API_KEY`。下面这些模型名都有默认值，只有想替换模型时才需要额外配置对应变量。
+当前实现使用阿里云 DashScope / 百炼。所有阿里云模型调用统一读取一个 API Key：
+
+```bash
+export DASHSCOPE_API_KEY=sk-...
+```
+
+下面这些模型名都有默认值，只有想替换具体模型时才需要额外配置对应变量。
 
 | 功能 | 默认模型 | 用途 | 可选环境变量 |
 | --- | --- | --- | --- |
@@ -70,6 +74,15 @@ flowchart LR
 | 问答 TTS | `qwen3-tts-instruct-flash-realtime` | 生成 AI 面试官语音 | `ALIYUN_QA_TTS_MODEL` |
 | 报告窗口 | `qwen-flash` | 分段整理训练过程中的表现 | `ALIYUN_REPORT_WINDOW_MODEL` |
 | 最终报告 | `qwen-flash`，兜底 `qwen-plus-latest` | 汇总整场训练报告和建议 | `ALIYUN_REPORT_BRAIN_MODEL`、`ALIYUN_REPORT_BRAIN_FALLBACK_MODEL` |
+
+如果不用阿里云，需要改后端的模型 provider 层，而不是只换一个 key：
+
+- 实时转写：替换 `backend/app/services/stt_service.py`。
+- 实时教练：替换 `backend/app/services/omni_service.py`。
+- AI 问答语音和 TTS：替换 `backend/app/services/qa_omni_realtime_service.py`、`backend/app/services/tts_service.py`。
+- 问答思考和报告：如果新供应商兼容 OpenAI Chat Completions，可以优先改 `ALIYUN_OPENAI_COMPAT_BASE_URL`、模型名和 key 读取逻辑；否则替换 `backend/app/services/qa_brain_service.py`、`backend/app/services/report_brain_service.py`。
+
+替换时尽量保持 `backend/app/schemas.py` 和 `backend/app/main.py` 的输入输出不变，这样前端训练台、报告页和回放页不用跟着改。
 
 ## 本地运行
 
@@ -113,10 +126,12 @@ npm run lint
 
 后端可以先启动 FastAPI，再检查 `/health`、登录、训练开始和 WebSocket 会话链路。
 
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=ImcLiuQian/speak_up&type=Date)](https://www.star-history.com/#ImcLiuQian/speak_up&Date)
+
+## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+This project is licensed under the [MIT License](LICENSE).
