@@ -42,27 +42,27 @@ class PublicRequestOriginTest(unittest.IsolatedAsyncioTestCase):
         request = _make_request(
             [
                 (b"x-forwarded-proto", b"https"),
-                (b"x-forwarded-host", b"speakupcoach.cn"),
+                (b"x-forwarded-host", b"speakup.cn"),
                 (b"host", b"127.0.0.1:8000"),
             ]
         )
 
         self.assertEqual(_public_request_scheme(request), "https")
-        self.assertEqual(_public_request_host(request), "speakupcoach.cn")
-        self.assertEqual(_build_websocket_url(request, "session-1", "secret-token"), "wss://speakupcoach.cn/ws/session/session-1")
+        self.assertEqual(_public_request_host(request), "speakup.cn")
+        self.assertEqual(_build_websocket_url(request, "session-1", "secret-token"), "wss://speakup.cn/ws/session/session-1")
 
     def test_can_include_websocket_query_token_for_cross_origin_deployments(self) -> None:
         request = _make_request(
             [
                 (b"x-forwarded-proto", b"https"),
-                (b"x-forwarded-host", b"speakupcoach.cn"),
+                (b"x-forwarded-host", b"speakup.cn"),
             ]
         )
 
         with patch.dict("os.environ", {"SPEAK_UP_WEBSOCKET_TOKEN_IN_QUERY": "true"}):
             self.assertEqual(
                 _build_websocket_url(request, "session-1", "secret token"),
-                "wss://speakupcoach.cn/ws/session/session-1?token=secret%20token",
+                "wss://speakup.cn/ws/session/session-1?token=secret%20token",
             )
 
     def test_falls_back_to_direct_request_origin(self) -> None:
@@ -96,11 +96,11 @@ class PublicRequestOriginTest(unittest.IsolatedAsyncioTestCase):
             response = TestClient(app).post(
                 "/api/session/start",
                 json={"scenarioId": "general", "language": "zh", "coachProfileId": "warm_voice_coach"},
-                headers={"x-forwarded-proto": "https", "x-forwarded-host": "speakupcoach.cn"},
+                headers={"x-forwarded-proto": "https", "x-forwarded-host": "speakup.cn"},
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["websocketUrl"], "wss://speakupcoach.cn/ws/session/session-1")
+        self.assertEqual(response.json()["websocketUrl"], "wss://speakup.cn/ws/session/session-1")
 
     async def test_websocket_owner_check_accepts_same_domain_cookie_token(self) -> None:
         websocket = _FakeWebSocket(

@@ -42,7 +42,7 @@ SPEAK_UP_AUTH_DB_PATH=output/auth_data/auth.sqlite3
 SPEAK_UP_INTERNAL_ACCOUNTS='[{"account":"account-id","password":"password","displayName":"内测用户"}]'
 ```
 
-`SPEAK_UP_INTERNAL_ACCOUNTS` 必须在运行环境里配置；为空时登录接口会返回“内测账号池未配置”，避免把真实账号口令长期写进仓库。
+`SPEAK_UP_INTERNAL_ACCOUNTS` 必须在运行环境里配置；为空时登录接口会返回“内测账号池未配置”。
 
 回放媒体默认保存在本地报告目录。接阿里云 OSS 时打开开关并配置 bucket：
 
@@ -57,20 +57,6 @@ SPEAK_UP_OSS_PREFIX=speak-up
 ```
 
 `SPEAK_UP_OSS_ENABLED` 默认是 `false`，即使用本地磁盘。设置为 `true` 后，回放视频上传到 OSS，本地只保留 `replay_media.json` 元数据。`SPEAK_UP_OSS_PUBLIC_BASE_URL` 可为空；为空时回放接口会生成短期签名 URL，适合私有 bucket。旧变量 `SPEAK_UP_STORAGE_DRIVER=oss` 仍兼容，但新部署优先使用 `SPEAK_UP_OSS_ENABLED`。
-
-如果生产环境已经存在本地回放媒体，配置好 OSS 后可以迁移：
-
-```bash
-cd /srv/speak_up/backend
-SPEAK_UP_OSS_ENABLED=true \
-SPEAK_UP_OSS_BUCKET=... \
-SPEAK_UP_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com \
-SPEAK_UP_OSS_ACCESS_KEY_ID=... \
-SPEAK_UP_OSS_ACCESS_KEY_SECRET=... \
-.venv/bin/python scripts/migrate_replay_media_to_oss.py --report-root output/report_data
-```
-
-迁移脚本会上传 `replay_media.*` 并把 `replay_media.json` 改为 OSS 元数据。默认会保留 ECS 本地媒体文件作为备份；确认 OSS 回放可用后，再追加 `--delete-local` 清理已迁移的本地媒体文件。如果元数据引用的本地媒体缺失，脚本默认失败并打印缺失记录；确认可以忽略时再追加 `--allow-missing`。
 
 ## WebSocket API
 

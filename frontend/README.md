@@ -6,7 +6,8 @@
 
 | Route | File | 作用 |
 | --- | --- | --- |
-| `/` | `app/page.tsx` | 主训练工作台。 |
+| `/` | `app/page.tsx` | 重定向到登录页。 |
+| `/login` | `app/login/page.tsx` | 内测账号登录页。 |
 | `/session` | `app/session/page.tsx` | 同一个工作台，便于承接 `scenario` 和 `coach` 查询参数。 |
 | `/report` | `app/report/page.tsx`、`app/report/report-client.tsx` | 最终报告页，报告生成中会轮询。 |
 | `/session/[sessionId]/replay` | `app/session/[sessionId]/replay/page.tsx` | 回放媒体、文字稿和教练信号时间轴。 |
