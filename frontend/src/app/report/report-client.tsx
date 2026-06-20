@@ -83,13 +83,14 @@ export function ReportClient({ initialRouteState }: { initialRouteState: ReportR
   const replayHref = activeReplaySessionId
     ? `/session/${activeReplaySessionId}/replay?coach=${activeCoachProfileId}`
     : null;
+  const coachSelectionHref = `/session?scenario=${encodeURIComponent(activeSetup.scenarioId)}`;
   const reportProcessing = activeReport?.status === "processing";
 
   useEffect(() => {
     if (!report && !setup && !sessionId) {
-      router.replace("/");
+      router.replace(coachSelectionHref);
     }
-  }, [report, router, sessionId, setup]);
+  }, [coachSelectionHref, report, router, sessionId, setup]);
 
   useEffect(() => {
     if (report || !sessionId) {
@@ -179,10 +180,10 @@ export function ReportClient({ initialRouteState }: { initialRouteState: ReportR
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center">
             <Link
-              href="/"
+              href={coachSelectionHref}
               className="inline-flex w-fit items-center justify-center rounded-full border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_8px_18px_rgba(15,23,42,0.06)] transition hover:border-slate-400 hover:bg-slate-200"
             >
-              ← 返回首页
+              ← 返回选教练
             </Link>
             {activeCoachProfile ? (
               <div className="inline-flex min-w-0 items-center gap-3 rounded-[20px] border border-violet-100 bg-white/90 px-3 py-2 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
